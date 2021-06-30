@@ -5,28 +5,17 @@ Input:
 - Data set including abstracts, titles and labels
 '''
 
-
 import configparser
 
 config = configparser.ConfigParser()
-'''
-if (os.getcwd()=='/home/guillotm')| (os.getcwd()=='/home/malka'):
-    config.read(os.getcwd()+'/Dropbox/postdoc_eth/projets/firm-registry-ch/code/config_mg.ini')
-if os.getcwd()=='/cluster/work/lawecon/Projects/Ash_Guillot/firm-registry-ch/code/pre-2001':
-    config.read('/cluster/work/lawecon/Projects/Ash_Guillot/firm-registry-ch/code/config.ini')
-if os.getcwd()=='/Users/annastuenzi/Dropbox (squadrat-architekten)/firm-registry-ch/code/pre-2001':
-    config.read('/cluster/work/lawecon/Projects/Ash_Guillot/firm-registry-ch/code/config.ini')
-'''
 
 import os
 
-config.read(os.getcwd()+'\\code\\config.ini')
+config.read(os.getcwd()+'/code/config.ini')
 
 data_path=config['PATH']['data_path']
-code_path=config['PATH']['data_path']
+code_path=config['PATH']['code_path']
 project_path=config['PATH']['project']
-
-import os
 
 file_name = "sample_for_damian.csv"
 
@@ -111,4 +100,4 @@ data_lang = pd.merge(
 data_lang.loc[data_lang[field_unidecode].str.contains("///")==True, "language_short"] = "multiple"
 data_lang.loc[data_lang[field_unidecode].str.len()<20, "language_short"] = "none"
 
-data_lang.iloc[:samp_size].to_csv(data_path + 'sample_for_damian_lang.csv', index=False)
+data_lang.iloc[:samp_size].to_csv(data_path + '/sample_for_damian_lang.csv', index=False)
