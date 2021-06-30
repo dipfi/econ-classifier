@@ -43,25 +43,25 @@ nlp = en_core_web_sm.load()
 nlp.add_pipe('language_detector', last=True)
 
 
-
-
-
-tic = time.perf_counter()
-data_orig['abstract_unidecode'] = data_orig['abstract'].progress_apply(lambda x: unidecode(str(x)))
-data_orig['title_unidecode'] = data_orig['title'].progress_apply(lambda x: unidecode(str(x)))
-toc = time.perf_counter()
-print(f"unidecode for {len(data_orig)} in {toc-tic} seconds")
-
-
 samp_size = 1000 #len(data_orig)
 field = "abstract" #"title"
 field_unidecode = field + "_unidecode"
 
+data_short = data_orig.loc[:samp_size,:].copy()
+
+
 tic = time.perf_counter()
-data_notempty = data_orig[["Unnamed: 0", field_unidecode]].iloc[:samp_size][data_orig[field_unidecode].str.contains("///")==False]
-data_notempty = data_notempty[data_notempty[field_unidecode].str.len()>50]
-data_notempty["language"] = data_notempty[field_unidecode].progress_apply(lambda x: detector_factory.detect_langs(x))
-data_notempty["language_short"] = data_notempty["language"].astype(str).str[1:3]
+data_short.loc[:,'abstract_unidecode'] = data_short.loc[:,'abstract'].progress_apply(lambda x: unidecode(str(x)))
+data_short.loc[:,'title_unidecode'] = data_short.loc[:,'title'].progress_apply(lambda x: unidecode(str(x)))
+toc = time.perf_counter()
+print(f"unidecode for {len(data_short)} in {toc-tic} seconds")
+
+
+tic = time.perf_counter()
+data_notempty = data_short.loc[:,["Unnamed: 0", field_unidecode]][data_short.loc[:,field_unidecode].str.contains("///")==False]
+data_notempty = data_notempty.loc[data_notempty[field_unidecode].str.len()>50,:]
+data_notempty.loc[:,"language"] = data_notempty.loc[:,field_unidecode].progress_apply(lambda x: detector_factory.detect_langs(x))
+data_notempty.loc[data_notempty["language"].str.len()>1, "language_short"] = "multiple"
 toc = time.perf_counter()
 print(f"detection for {len(data_notempty)} in {toc-tic} seconds")
 
@@ -88,8 +88,8 @@ print(f"detection for {len(data_notempty)} in {toc-tic} seconds")
 '''
 
 
-data_lang = pd.merge(
-                data_orig.loc[:,data_orig.columns != "index"],
+data_final = pd.merge(
+                data_short.loc[:,data_short.columns != "index"],
                 data_notempty.loc[:,["Unnamed: 0", "language", "language_short"]],
                 how = "left",
                 left_on = "Unnamed: 0",
@@ -97,7 +97,7 @@ data_lang = pd.merge(
             )
 
 
-data_lang.loc[data_lang[field_unidecode].str.contains("///")==True, "language_short"] = "multiple"
-data_lang.loc[data_lang[field_unidecode].str.len()<20, "language_short"] = "none"
+data_final.loc[data_final[field_unidecode].str.contains("///")==True, "language_short"] = "multiple"
+data_final.loc[data_final[field_unidecode].str.len()<20, "language_short"] = "none"
 
-data_lang.iloc[:samp_size].to_csv(data_path + '/sample_for_damian_lang.csv', index=False)
+data_final.iloc[:samp_size].to_csv(data_path + '/sample_for_damian_lang.csv', index=False)
