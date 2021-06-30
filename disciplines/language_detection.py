@@ -6,19 +6,34 @@ Input:
 '''
 
 
+import configparser
+
+config = configparser.ConfigParser()
+'''
+if (os.getcwd()=='/home/guillotm')| (os.getcwd()=='/home/malka'):
+    config.read(os.getcwd()+'/Dropbox/postdoc_eth/projets/firm-registry-ch/code/config_mg.ini')
+if os.getcwd()=='/cluster/work/lawecon/Projects/Ash_Guillot/firm-registry-ch/code/pre-2001':
+    config.read('/cluster/work/lawecon/Projects/Ash_Guillot/firm-registry-ch/code/config.ini')
+if os.getcwd()=='/Users/annastuenzi/Dropbox (squadrat-architekten)/firm-registry-ch/code/pre-2001':
+    config.read('/cluster/work/lawecon/Projects/Ash_Guillot/firm-registry-ch/code/config.ini')
+'''
 
 import os
 
-dname = "C:/Users/Damian/kDrive/Main/Master/Masterarbeit/Ash/Project/code/disciplines"
-os.chdir(dname)
-print(os.getcwd())
-data_path = "../../data/"
-data_name = "sample_for_damian.csv"
+config.read(os.getcwd()+'\\code\\config.ini')
+
+data_path=config['PATH']['data_path']
+code_path=config['PATH']['data_path']
+project_path=config['PATH']['project']
+
+import os
+
+file_name = "sample_for_damian.csv"
 
 
 import pandas as pd
 
-data_orig = pd.read_csv(data_path + data_name)
+data_orig = pd.read_csv(data_path + "/" + file_name)
 
 
 import en_core_web_sm
@@ -32,7 +47,7 @@ from spacy.language import Language
 
 def create_lang_detector(nlp, name):
     return LanguageDetector()
-    
+
 Language.factory("language_detector", func=create_lang_detector)
 
 nlp = en_core_web_sm.load()
@@ -49,7 +64,7 @@ toc = time.perf_counter()
 print(f"unidecode for {len(data_orig)} in {toc-tic} seconds")
 
 
-samp_size = len(data_orig)
+samp_size = 1000 #len(data_orig)
 field = "abstract" #"title"
 field_unidecode = field + "_unidecode"
 
