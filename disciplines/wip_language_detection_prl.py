@@ -1,13 +1,9 @@
 '''
-This script is recognizing the language of the abstracts
+This script will classify the abstracts of research papers from different social science disciplines according to their discipline
 
 Input:
 - Data set including abstracts, titles and labels
 '''
-
-import random
-
-random.seed(10)
 
 import configparser
 
@@ -21,27 +17,13 @@ data_path=config['PATH']['data_path']
 code_path=config['PATH']['code_path']
 project_path=config['PATH']['project']
 
+file_name = "sample_for_damian.csv"
+
+
 import pandas as pd
 
-'''
-INPUT PARAMETERS HERE
-'''
-############################################
-file_name = "sample_for_damian.csv"
 data_orig = pd.read_csv(data_path + "/" + file_name)
-sample_size = 10000 #len(data_orig) #10000
-field = "abstract" #"title"
-save = True #False
-##########################################
 
-sample_fraction = sample_size/len(data_orig)
-field_unidecode = field + "_unidecode"
-
-data_short = data_orig.sample(frac = sample_fraction).copy()
-
-if (save == True) & (sample_size != len(data_orig)):
-    print("we're right here")
-    data_short.to_csv(data_path + '/sample_for_damian_' + str(sample_size) + '.csv', index=False)
 
 import en_core_web_sm
 from langdetect import detector_factory
@@ -61,6 +43,13 @@ nlp = en_core_web_sm.load()
 nlp.add_pipe('language_detector', last=True)
 
 
+samp_size = 1000 #len(data_orig)
+field = "abstract" #"title"
+field_unidecode = field + "_unidecode"
+
+data_short = data_orig.loc[:samp_size,:].copy()
+
+
 tic = time.perf_counter()
 data_short.loc[:,'abstract_unidecode'] = data_short.loc[:,'abstract'].progress_apply(lambda x: unidecode(str(x)))
 data_short.loc[:,'title_unidecode'] = data_short.loc[:,'title'].progress_apply(lambda x: unidecode(str(x)))
@@ -72,7 +61,6 @@ tic = time.perf_counter()
 data_notempty = data_short.loc[:,["Unnamed: 0", field_unidecode]][data_short.loc[:,field_unidecode].str.contains("///")==False]
 data_notempty = data_notempty.loc[data_notempty[field_unidecode].str.len()>50,:]
 data_notempty.loc[:,"language"] = data_notempty.loc[:,field_unidecode].progress_apply(lambda x: detector_factory.detect_langs(x))
-data_notempty.loc[:,"language_short"] = [text[1:3] for text in [str(text) for text in data_notempty.loc[:,"language"]]]
 data_notempty.loc[data_notempty["language"].str.len()>1, "language_short"] = "multiple"
 toc = time.perf_counter()
 print(f"detection for {len(data_notempty)} in {toc-tic} seconds")
@@ -81,7 +69,7 @@ print(f"detection for {len(data_notempty)} in {toc-tic} seconds")
 '''
 ALTERNATIVE, not faster
 tic = time.perf_counter()
-data_notempty = data_orig[data_orig.abstract.str.contains("///")==False]
+data_notempty = data_orig.iloc[:samp_size][data_orig.abstract.str.contains("///")==False]
 data_notempty = data_notempty[data_notempty.abstract.str.len()>50]
 index_nonempty = list(data_notempty["Unnamed: 0"])
 list_nonempty = list(data_notempty[field_unidecode])
@@ -112,11 +100,4 @@ data_final = pd.merge(
 data_final.loc[data_final[field_unidecode].str.contains("///")==True, "language_short"] = "multiple"
 data_final.loc[data_final[field_unidecode].str.len()<20, "language_short"] = "none"
 
-if save == True:
-    if sample_size == len(data_orig):
-        print("sample_size == len(data_orig)")
-        data_final.to_csv(data_path + '/' + file_name + "_lang.csv", index=False)
-
-    else:
-        data_final.to_csv(data_path + '/sample_for_damian_' + str(sample_size) + '_lang.csv', index=False)
-
+data_final.iloc[:samp_size].to_csv(data_path + '/sample_for_damian_lang.csv', index=False)
