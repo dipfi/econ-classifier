@@ -55,7 +55,7 @@ project_path=config['PATH']['project']
 INPUT PARAMETERS HERE
 '''
 ############################################
-file_name = "sample_for_damian_10000"
+file_name = "sample_for_damian"
 data_orig = pd.read_csv(data_path + "/" + file_name + ".csv")
 sample_size = 5000 #len(data_orig) #10000
 field = "abstract" #"title"
