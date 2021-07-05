@@ -37,7 +37,7 @@ import gensim
 import pandas as pd
 
 from tqdm import tqdm
-tqdm.pandas()
+#tqdm.pandas()
 
 ##Set up
 import random
@@ -51,13 +51,21 @@ code_path=config['PATH']['code_path']
 project_path=config['PATH']['project']
 
 
+
+
+
+
+
+
+
+
 '''
 INPUT PARAMETERS HERE
 '''
 ############################################
 file_name = "sample_for_damian"
 data_orig = pd.read_csv(data_path + "/" + file_name + ".csv")
-sample_size = 5000 #len(data_orig) #10000
+sample_size = len(data_orig) #10000
 field = "abstract" #"title"
 save = True #False
 min_char = 120
@@ -71,6 +79,14 @@ data_short = data_orig.sample(frac = sample_fraction).copy()
 if (save == True) & (sample_size != len(data_orig)):
     print("we're right here")
     data_short.to_csv(data_path + '/sample_for_damian_' + str(sample_size) + '.csv', index=False)
+
+
+
+
+
+
+
+
 
 '''
 READ DATA
@@ -92,23 +108,31 @@ lst_dics[0]
 dtf = data_orig.loc[(data_orig["abstract"].str.len() > min_char) ,:].copy()
 dtf.rename(columns = {"abstract":"text", "discipline":"y"}, inplace = True)
 
+toc = time.perf_counter()
+print(f"READ DATA {file_name} in {toc-tic} seconds")
+
+
 '''
 SUBSET DATA
 '''
 print("SUBSET DATA")
+
+'''
 ## create dtf with news-data
-#dtf = pd.DataFrame(lst_dics)
+dtf = pd.DataFrame(lst_dics)
 
 ## filter categories
-#dtf = dtf[dtf["category"].isin(['ENTERTAINMENT','POLITICS','TECH']) ][["category","headline"]]
+dtf = dtf[dtf["category"].isin(['ENTERTAINMENT','POLITICS','TECH']) ][["category","headline"]]
 
 ## rename columns
-#dtf = dtf.rename(columns={"category":"y", "headline":"text"})
+dtf = dtf.rename(columns={"category":"y", "headline":"text"})
 
-#dtf = dtf.sample(frac = 0.1)
+dtf = dtf.sample(frac = 0.1)
 
-# t 5 random rows
+t 5 random rows
 print(dtf.sample(5))
+'''
+
 
 '''
 x = "y"
@@ -118,6 +142,12 @@ fig.suptitle(x, fontsize=12)
 dtf[x].reset_index().groupby(x).count().sort_values(by="index").plot(kind="barh", legend=False, ax=ax).grid(axis='x')
 plt.show()
 '''
+
+
+
+
+
+
 
 
 '''
@@ -133,13 +163,13 @@ print(txt, " --> ", langdetect.detect(txt))
 dtf['first120'] = [str(x)[:min_char] for x in dtf.loc[:,"text"]]
 dtf['last120'] = [str(x)[-min_char:] for x in dtf.loc[:,"text"]]
 
-dtf['text_beginning'] = dtf["first120"].progress_apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
-dtf['text_end'] = dtf["last120"].progress_apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
+dtf['text_beginning'] = dtf["first120"].apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
+dtf['text_end'] = dtf["last120"].apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
 
 dtf.loc[dtf['text_beginning'] == dtf['text_end'], 'lang'] = dtf['text_beginning']
 dtf.loc[dtf['text_beginning'] != dtf['text_end'], 'lang'] = "unassigned"
 
-print(dtf.head())
+#print(dtf.head())
 
 
 '''
@@ -167,6 +197,19 @@ dtf = dtf_lang.copy()
 
 dtf = dtf[dtf["lang"]=="en"]
 
+toc = time.perf_counter()
+print(f" LANGUAGE DETECTION {file_name} in {toc-tic} seconds")
+
+
+
+
+
+
+
+
+
+
+
 
 '''
 TEXT PREPROCESSING
@@ -184,7 +227,7 @@ print("--- tokenization ---")
 txt = txt.split()
 print(txt)
 '''
-
+nltk.download('stopwords')
 lst_stopwords = nltk.corpus.stopwords.words("english")
 #print(lst_stopwords)
 
@@ -240,10 +283,9 @@ def utils_preprocess_text(text, flg_stemm=False, flg_lemm=True, lst_stopwords=No
     text = " ".join(lst_text)
     return text
 
-dtf["text_clean"] = dtf["text"].progress_apply(lambda x: utils_preprocess_text(x, flg_stemm=False, flg_lemm=True, lst_stopwords=lst_stopwords))
+dtf["text_clean"] = dtf["text"].apply(lambda x: utils_preprocess_text(x, flg_stemm=False, flg_lemm=True, lst_stopwords=lst_stopwords))
 
-
-print(dtf.head())
+#print(dtf.head())
 '''
 print(dtf["text"].iloc[0], " --> ", dtf["text_clean"].iloc[0])
 '''
@@ -253,22 +295,35 @@ dtf_preproc = dtf.copy()
 ### Starting point
 dtf = dtf_preproc.copy()
 
+
+toc = time.perf_counter()
+print(f" TEXT PREPROCESSING {file_name} in {toc-tic} seconds")
+
+
+
+
+
+
+
+
+
+
 '''
 LENGTH ANALYSIS
 '''
 print("LENGTH ANALYSIS")
 
-dtf['word_count'] = dtf["text"].progress_apply(lambda x: len(str(x).split(" ")))
+dtf['word_count'] = dtf["text"].apply(lambda x: len(str(x).split(" ")))
 
-dtf['char_count'] = dtf["text"].progress_apply(lambda x: sum(len(word) for word in str(x).split(" ")))
+dtf['char_count'] = dtf["text"].apply(lambda x: sum(len(word) for word in str(x).split(" ")))
 
-dtf['sentence_count'] = dtf["text"].progress_apply(lambda x: len(str(x).split(".")))
+dtf['sentence_count'] = dtf["text"].apply(lambda x: len(str(x).split(".")))
 
 dtf['avg_word_length'] = dtf['char_count'] / dtf['word_count']
 
 dtf['avg_sentence_lenght'] = dtf['word_count'] / dtf['sentence_count']
 
-print(dtf.head())
+#print(dtf.head())
 
 
 
@@ -298,58 +353,17 @@ dtf.loc[dtf.loc[:,"char_count"] > trim_point, "text_clean_short"] = [text[:trim_
 dtf.loc[dtf.loc[:,"char_count"] > trim_point, "text_short"] = [text[:trim_point] for text in dtf["text"].loc[dtf["char_count"] > trim_point]]
 
 
-print("LENGTH ANALYSIS")
+dtf['word_count_short'] = dtf["text_short"].apply(lambda x: len(str(x).split(" ")))
 
-dtf['word_count_short'] = dtf["text_short"].progress_apply(lambda x: len(str(x).split(" ")))
+dtf['char_count_short'] = dtf["text_short"].apply(lambda x: sum(len(word) for word in str(x).split(" ")))
 
-dtf['char_count_short'] = dtf["text_short"].progress_apply(lambda x: sum(len(word) for word in str(x).split(" ")))
-
-dtf['sentence_count_short'] = dtf["text_short"].progress_apply(lambda x: len(str(x).split(".")))
+dtf['sentence_count_short'] = dtf["text_short"].apply(lambda x: len(str(x).split(".")))
 
 dtf['avg_word_length_short'] = dtf['char_count_short'] / dtf['word_count_short']
 
 dtf['avg_sentence_lenght_short'] = dtf['word_count_short'] / dtf['sentence_count_short']
 
-print(dtf.head())
-
-
-
-
-
-
-'''
-dtf2 = dtf.copy()
-
-dtf2['word_count'] = dtf2["text_short"].progress_apply(lambda x: len(str(x).split(" ")))
-
-dtf2['char_count'] = dtf2["text_short"].progress_apply(lambda x: sum(len(word) for word in str(x).split(" ")))
-
-dtf2['sentence_count'] = dtf2["text_short"].progress_apply(lambda x: len(str(x).split(".")))
-
-dtf2['avg_word_length'] = dtf2['char_count'] / dtf2['word_count']
-
-dtf2['avg_sentence_lenght'] = dtf2['word_count'] / dtf2['sentence_count']
-
-print(dtf2.head())
-
-
-
-x, y = "char_count", "y"
-
-fig, ax = plt.subplots(nrows=1, ncols=2)
-fig.suptitle(x, fontsize=12)
-for i in dtf2[y].unique():
-    sns.distplot(dtf2[dtf2[y]==i][x], hist=True, kde=False,
-                 bins=10, hist_kws={"alpha":0.8},
-                 axlabel="histogram", ax=ax[0])
-    sns.distplot(dtf2[dtf2[y]==i][x], hist=False, kde=True,
-                 kde_kws={"shade":True}, axlabel="density",
-                 ax=ax[1])
-ax[0].grid(True)
-ax[0].legend(dtf2[y].unique())
-ax[1].grid(True)
-plt.show()
-'''
+#print(dtf.head())
 
 dtf_lengths = dtf.copy()
 
@@ -364,13 +378,29 @@ if save == True:
     else:
         dtf.to_csv(data_path + '/sample_for_damian_' + str(sample_size) + '_preproc.csv', index=False)
 
+
+
+toc = time.perf_counter()
+print(f" LENGTH ANALYSIS {file_name} in {toc-tic} seconds")
+
+
+
+
+
+
+
+
+
+
+
+
 '''
 SENTIMENT ANALYSIS
 '''
 '''
 print("SENTIMENT ANALYSIS")
 
-dtf["sentiment"] = dtf["text_clean"].progress_apply(lambda x: TextBlob(x).sentiment.polarity)
+dtf["sentiment"] = dtf["text_clean"].apply(lambda x: TextBlob(x).sentiment.polarity)
 print(dtf.head())
 
 print(dtf["text"].iloc[0], " --> ", dtf["sentiment"].iloc[0])
@@ -404,7 +434,7 @@ spacy.displacy.render(doc, style="ent")
 
 
 ## tag text and exctract tags into a list
-dtf["tags"] = dtf["text"].progress_apply(lambda x: [(tag.text, tag.label_) for tag in ner(x).ents] )
+dtf["tags"] = dtf["text"].apply(lambda x: [(tag.text, tag.label_) for tag in ner(x).ents] )
 
 ## utils function to count the element of a list
 def utils_lst_count(lst):
@@ -418,7 +448,7 @@ def utils_lst_count(lst):
     return lst_count
 
 ## count tags
-dtf["tags"] = dtf["tags"].progress_apply(lambda x: utils_lst_count(x))
+dtf["tags"] = dtf["tags"].apply(lambda x: utils_lst_count(x))
 
 ## utils function create new column for each tag category
 def utils_ner_features(lst_dics_tuples, tag):
@@ -443,7 +473,7 @@ for lst in dtf["tags"].tolist():
               tags_set.append(k[1])
 tags_set = list(set(tags_set))
 for feature in tags_set:
-     dtf["tags_"+feature] = dtf["tags"].progress_apply(lambda x: utils_ner_features(x, feature))
+     dtf["tags_"+feature] = dtf["tags"].apply(lambda x: utils_ner_features(x, feature))
 
 ## print result
 print(dtf.head())
@@ -508,7 +538,7 @@ ax[0].set(ylabel=None)
 ## bigrams
 dic_words_freq = nltk.FreqDist(nltk.ngrams(lst_tokens, 2))
 dtf_bi = pd.DataFrame(dic_words_freq.most_common(),columns=["Word", "Freq"])
-dtf_bi["Word"] = dtf_bi["Word"].progress_apply(lambda x: " ".join(string for string in x))
+dtf_bi["Word"] = dtf_bi["Word"].apply(lambda x: " ".join(string for string in x))
 dtf_bi.set_index("Word").iloc[:top, :].sort_values(by="Freq").plot(kind="barh", title="Bigrams", ax=ax[1],legend=False).grid(axis='x')
 ax[1].set(ylabel=None)
 plt.show()
