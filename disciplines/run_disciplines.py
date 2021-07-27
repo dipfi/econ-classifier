@@ -17,6 +17,9 @@ data_path = config['PATH']['data_path']
 scripts_path = config['PATH']['scripts_path']
 project_path = config['PATH']['project']
 
+import sys
+sys.path.append(project_path)
+
 ##parallelization
 import multiprocessing as mp
 
@@ -66,7 +69,7 @@ import langdetect
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
 input_file_name = "sample_for_damian"
-input_file_size = 500
+input_file_size = 50000
 input_file_type = "csv"
 sample_size = input_file_size  # input_file_size #10000
 text_field = "abstract"  # "title" #"abstract"
