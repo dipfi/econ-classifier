@@ -1,10 +1,10 @@
 ## set up
 import time
-
 tic = time.perf_counter()
-import random
 
+import random
 random.seed(10)
+
 import logging
 
 ##config set up
@@ -12,13 +12,16 @@ import configparser
 import os
 
 config = configparser.ConfigParser()
-config.read(os.getcwd() + '/code/config.ini')
+config.read(os.getcwd() + '/scripts/.config.ini')
 data_path = config['PATH']['data_path']
-code_path = config['PATH']['code_path']
+scripts_path = config['PATH']['scripts_path']
 project_path = config['PATH']['project']
 
 ##parallelization
 import multiprocessing as mp
+
+##downloading wordlist in main
+import nltk
 
 '''
 DISCIPLINES SPECIFIC IMPORTS
@@ -69,7 +72,7 @@ sample_size = input_file_size  # input_file_size #10000
 text_field = "abstract"  # "title" #"abstract"
 label_field = "discipline"
 min_char = 120
-cores = 10 #mp.cpu_count()
+cores = mp.cpu_count()  #2
 save = True  # False #True
 ############################################
 
@@ -101,13 +104,15 @@ logging.basicConfig(level=logging_level,
 
 logger = logging.getLogger()
 
-from code.Utils import utils_disciplines as fcts
+from scripts.Utils import utils_disciplines as fcts
 
 
 def main():
     logger.info("START MAIN")
     logger.info("Logging Level: " + str(logging_level))
     logger.info("Working Directors: " + str(os.getcwd()))
+    nltk.download('wordnet')
+    nltk.download('stopwords')
     fcts.hello_world()
     logger.info("Data Path: " + str(data_path))
     dtf = fcts.load_data(data_path=data_path,

@@ -157,7 +157,6 @@ Preprocess a string.
 
 
 def utils_preprocess_text(text, flg_stemm=False, flg_lemm=True):
-
     lst_stopwords = nltk.corpus.stopwords.words("english")
 
     ## clean (convert to lowercase and remove punctuations and characters and then strip)
