@@ -114,7 +114,7 @@ def save_data_csv(dtf,
                   data_path,
                   output_file_name):
     new_file_name = data_path + '/' + output_file_name + '.csv'
-    logging.info("SAVING NEW FILE: " + new_sample_file_name)
+    logging.info("SAVING NEW FILE: " + new_file_name)
     dtf.to_csv(new_file_name, index=False)
 
 

@@ -44,7 +44,7 @@ pd.set_option('display.max_columns', None)
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 cores = mp.cpu_count()  #2
-
+output_file_name = "journal_list_sociology_test"
 
 
 '''
@@ -61,7 +61,7 @@ target_addresses = ['/cluster/work/lawecon/Data/jstor_econ/raw',
 '''
 
 #target_addresses = [str(data_path + "/jstor_sociology_small")]
-target_addresses = ["C:/Users/damdu/kDrive/Master/Masterarbeit/Ash/dev/data/jstor_sociology"]
+target_addresses = ["C:/Users/damdu/kDrive/Master/Masterarbeit/Ash/dev/data/jstor_sociology_small"]
 
 ############################################
 
@@ -114,29 +114,23 @@ def main():
 
 # In[2]:
 
-
+    '''
     #counts_df.to_csv(str(data_path + "/journal_list_sociology_test.csv"))
     counts_df.to_csv("C:/Users/damdu/kDrive/Master/Masterarbeit/Ash/dev/data/journal_list_sociology_test2.csv")
+
+
+
+    ###
+    '''
+
+    fcts.save_data_csv(dtf = counts_df,
+                       data_path = data_path,
+                       output_file_name = output_file_name)
 
     logger.info("END MAIN")
     toc = time.perf_counter()
     logger.info(f"whole script in {toc - tic} seconds")
 
-    ###
-    '''
-    fcts.save_data_csv(dtf = counts_df,
-                       data_path = data_path,
-                       output_file_name = "journal_list_sociology_test")
-    
-    '''
-    '''
-    counts_df = fcts.journal_list_wrapper(target_addresses = target_addresses,
-                                          cores = cores)
-    print(counts_df)
-
-    print(data_path)
-
-    '''
 
 if __name__ == "__main__":
     main()
