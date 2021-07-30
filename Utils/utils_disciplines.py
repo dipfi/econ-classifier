@@ -9,6 +9,7 @@ import multiprocessing as mp
 ## for preprocessing
 import nltk
 import re
+import os
 
 
 def hello_world():
@@ -189,7 +190,6 @@ def utils_preprocess_text(text, flg_stemm=False, flg_lemm=True):
 def preprocessing_wrapper(dtf,
                           cores,
                           function=utils_preprocess_text):
-
     #import logging
     #logger = logging.getLogger("__main__")
 

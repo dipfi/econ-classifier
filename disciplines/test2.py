@@ -10,22 +10,16 @@ import logging
 ##config set up
 import configparser
 import os
+
+config = configparser.ConfigParser()
+config.read(os.getcwd() + '/scripts/config.ini')
+
+data_path = config['PATH']['data_path']
+scripts_path = config['PATH']['scripts_path']
+project_path = config['PATH']['project_path']
+
 import sys
-
-def config():
-    config = configparser.ConfigParser()
-    config.read(os.getcwd() + '/scripts/config.ini')
-
-    data_path = config['PATH']['data_path']
-    scripts_path = config['PATH']['scripts_path']
-    project_path = config['PATH']['project_path']
-
-    sys.path.append(project_path)
-    return data_path, scripts_path, project_path
-
-if __name__ == "__main__":
-    data_path, scripts_path, project_path = config()
-
+sys.path.append(project_path)
 
 ##parallelization
 import multiprocessing as mp
@@ -86,23 +80,19 @@ save = False  # False #True
 ############################################
 
 
-def monitor_process():
-    ##monitor progress if run on local machine
-    if not project_path[0] == "/":
-        if __name__ == "__main__":
-            print("--LOCAL RUN--")
+##monitor progress if run on local machine
+if not project_path[0] == "/":
+    if __name__ == "__main__":
+        print("--LOCAL RUN--")
 
-            ##monitor progress
-            from tqdm import tqdm
+        ##monitor progress
+        from tqdm import tqdm
 
-            tqdm.pandas()
+        tqdm.pandas()
 
-    if project_path[0] == "/":
-        if __name__ == "__main__":
-            print("--CLUSTER RUN--")
-
-if __name__ == "__main__":
-    monitor_process()
+if project_path[0] == "/":
+    if __name__ == "__main__":
+        print("--CLUSTER RUN--")
 
 ##logs
 logging.basicConfig(level=logging_level,
