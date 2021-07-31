@@ -16,6 +16,27 @@ def hello_world():
 
 
 def process_zipfile(zf_name):
+
+    top6_journals = set(['The American Economic Review',
+                         'The Review of Economic Studies',
+                         'The Quarterly Journal of Economics',
+                         'Journal of Political Economy',
+                         'Econometrica',
+                         'The Economic Journal',  ##economics
+                         'American Journal of Sociology',
+                         'The British Journal of Sociology',
+                         'Social Forces',
+                         'European Sociological Review',
+                         'American Sociological Review',
+                         'Social Problems',  ##sociology
+                         'American Journal of Political Science',
+                         'The American Political Science Review',
+                         'British Journal of Political Science',
+                         'The Journal of Politics',
+                         'Political Analysis',
+                         'International Organization',  ##Political Science
+                         ])
+
     zf = zipfile.ZipFile(zf_name)
     names = zf.namelist()
     metanames = [s for s in names if 'metadata' in s]
@@ -29,15 +50,43 @@ def process_zipfile(zf_name):
             soup = BeautifulSoup(zf.read(metaname), 'html.parser')
             journal = soup.find_all('journal-title')[0].text
             # abstract = soup.find_all('abstract')[0].text.lower().replace('\n','')
+            if soup.find('abstract'):
+                abstract = 1
+            else:
+                abstract = 0
+
+            if soup.find('publisher-name'):
+                publisher = 1
+            else:
+                publisher = 0
+
             # title = soup.find_all('article-title')[0].text.lower()
+            if soup.find('article-title'):
+                title = 1
+            else:
+                title = 0
+
+            if soup.find('given-names'):
+                author_firstname = 1
+            else:
+                author_firstname = 0
+
+            if soup.find('surname'):
+                author_lastname = 1
+            else:
+                author_lastname = 0
+
             year = soup.find('pub-date').findChild('year').text
-            # top6 = if_top6(journal)
+            top6 = if_top6(journal)
             data = {'jstor_id': id_,
                     'journal': journal,
                     'year': year,
-                    # 'top6':top6,
-                    # 'abstract':abstract,
-                    # 'title':title
+                    'top6':top6,
+                    'abstract':abstract,
+                    'title':title,
+                    'publisher':publisher,
+                    'author_firstname':author_firstname,
+                    'author_lastname':author_lastname
                     }
             metadata_list.append(data)
         except:
@@ -74,6 +123,7 @@ def journal_list_wrapper(target_addresses,
                          fct_multiprocessing_wrapper = multiprocessing_wrapper,
                          ):
 
+    dfs = []
     for count, address in enumerate(target_addresses):
 
         os.chdir(address)
@@ -97,12 +147,18 @@ def journal_list_wrapper(target_addresses,
 
         results_df['discipline'] = count
 
-        dfs = []
         dfs.append(results_df)
 
     primary_df = pd.concat(dfs)
 
-    counts_df = primary_df.groupby(by=["journal", "discipline"])["year"].value_counts().reset_index(name="count")
+    counts_df = primary_df.groupby(by=["journal",
+                                       "discipline",
+                                       "title",
+                                       "abstract",
+                                       "top6",
+                                       "publisher",
+                                       "author_firstname",
+                                       "author_lastname"])["year"].value_counts().reset_index(name="count")
 
     return counts_df
 
@@ -125,12 +181,18 @@ def save_data_csv(dtf,
 
 
 
+
+
+
+
+
+
+
+
+
 #############
 # DEV
 #############
-
-
-
 
 def journal_list_wrapper_test(target_addresses,
                          cores,
@@ -138,6 +200,7 @@ def journal_list_wrapper_test(target_addresses,
                          fct_multiprocessing_wrapper = multiprocessing_wrapper,
                          ):
 
+    dfs = []
     for count, address in enumerate(target_addresses):
 
         os.chdir(address)
@@ -161,7 +224,6 @@ def journal_list_wrapper_test(target_addresses,
 
         results_df['discipline'] = count
 
-        dfs = []
         dfs.append(results_df)
 
     return dfs

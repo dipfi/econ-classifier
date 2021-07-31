@@ -60,8 +60,13 @@ target_addresses = ['/cluster/work/lawecon/Data/jstor_econ/raw',
                     '/cluster/work/lawecon/Work/JSTOR_metadata/history']
 '''
 
-#target_addresses = [str(data_path + "/jstor_sociology_small")]
-target_addresses = ["C:/Users/damdu/kDrive/Master/Masterarbeit/Ash/dev/data/jstor_sociology_small"]
+target_addresses = ["C:/Users/damdu/kDrive/Master/Masterarbeit/Ash/dev/data/jstor_sociology_small",
+                    "C:/Users/damdu/kDrive/Master/Masterarbeit/Ash/dev/data/jstor_sociology_small"]
+'''
+target_addresses = ['/cluster/work/lawecon/Data/jstor_econ/raw',
+                    '/cluster/work/lawecon/Work/dcai/journal_articles/data/jstor/jstor_sociology',
+                    '/cluster/work/lawecon/Work/JSTOR_metadata/political_science']
+'''
 
 ############################################
 
