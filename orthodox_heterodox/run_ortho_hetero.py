@@ -10,16 +10,22 @@ import logging
 ##config set up
 import configparser
 import os
-
-config = configparser.ConfigParser()
-config.read(os.getcwd() + '/scripts/config.ini')
-
-data_path = config['PATH']['data_path']
-scripts_path = config['PATH']['scripts_path']
-project_path = config['PATH']['project_path']
-
 import sys
-sys.path.append(project_path)
+
+def config():
+    config = configparser.ConfigParser()
+    config.read(os.getcwd() + '/config.ini')
+
+    data_path = config['PATH']['data_path']
+    scripts_path = config['PATH']['scripts_path']
+    project_path = config['PATH']['project_path']
+
+    sys.path.append(project_path)
+    return data_path, scripts_path, project_path
+
+if __name__ == "__main__":
+    data_path, scripts_path, project_path = config()
+
 
 ##parallelization
 import multiprocessing as mp
@@ -68,31 +74,36 @@ import langdetect
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "sample_for_damian"
-input_file_size = 500
+input_file_name = "WOS_lee_heterodox_und_samequality"
+input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
-sample_size = input_file_size  # input_file_size #10000
-text_field = "abstract"  # "title" #"abstract"
-label_field = "discipline"
+output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+sample_size = "all"  #input_file_size #10000 #"all"
+text_field = "Abstract"  # "title" #"abstract"
+label_field = "labels"
 min_char = 120
-cores = 2 #mp.cpu_count()  #2
-save = False  # False #True
+cores = mp.cpu_count()  #mp.cpu_count()  #2
+save = True  # False #True
 ############################################
 
 
-##monitor progress if run on local machine
-if not project_path[0] == "/":
-    if __name__ == "__main__":
-        print("--LOCAL RUN--")
+def monitor_process():
+    ##monitor progress if run on local machine
+    if not project_path[0] == "/":
+        if __name__ == "__main__":
+            print("--LOCAL RUN--")
 
-        ##monitor progress
-        from tqdm import tqdm
+            ##monitor progress
+            from tqdm import tqdm
 
-        tqdm.pandas()
+            tqdm.pandas()
 
-if project_path[0] == "/":
-    if __name__ == "__main__":
-        print("--CLUSTER RUN--")
+    if project_path[0] == "/":
+        if __name__ == "__main__":
+            print("--CLUSTER RUN--")
+
+if __name__ == "__main__":
+    monitor_process()
 
 ##logs
 logging.basicConfig(level=logging_level,
@@ -107,7 +118,7 @@ logging.basicConfig(level=logging_level,
 
 logger = logging.getLogger()
 
-from scripts.Utils import utils_disciplines as fcts
+from Utils import utils_ortho_hetero as fcts
 
 def main():
     logger.info("START MAIN")
@@ -146,7 +157,7 @@ def main():
                                           min_char=min_char,
                                           cores=cores,
                                           function=langdetect.detect)
-    logger.info("Data Languages Head:\n" + str(dtf.head()) + "\n")
+    # logger.info("Data Languages Head:\n" + str(dtf.head()) + "\n")
 
     #lst_stopwords = fcts.load_stopwords()
 
@@ -158,6 +169,11 @@ def main():
     toc = time.perf_counter()
     logger.info(f"whole script for {sample_size} in {toc - tic} seconds")
 
+    if save == True:
+        fcts.save_data_csv(dtf=dtf,
+                           data_path=data_path,
+                           output_file_name=output_file_name,
+                           sample_size=sample_size)
 
 if __name__ == "__main__":
     main()
