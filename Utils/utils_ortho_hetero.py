@@ -38,8 +38,8 @@ def load_data(data_path,
         sample_fraction = sample_size / len(dtf)
         dtf = dtf.sample(frac=sample_fraction).copy()
 
+    logger.info("Data loaded")
     return dtf
-
 
 
 
@@ -47,7 +47,12 @@ def save_data_csv(dtf,
                   data_path,
                   output_file_name,
                   sample_size):
-    new_sample_file_name = data_path + '/' + output_file_name + "_" + str(sample_size) + '.csv'
+
+    if sample_size == "all":
+        new_sample_file_name = data_path + '/' + output_file_name + '.csv'
+    else:
+        new_sample_file_name = data_path + '/' + output_file_name + "_" + str(sample_size) + '.csv'
+
     logging.info("SAVING NEW SAMPLE FILE: " + new_sample_file_name)
     dtf.to_csv(new_sample_file_name, index=False)
 
@@ -160,11 +165,15 @@ Preprocess a string.
 '''
 
 
-def utils_preprocess_text(text, flg_stemm=False, flg_lemm=True):
+def utils_preprocess_text(text,
+                          flg_stemm=False,
+                          flg_lemm=True,
+                          remove_last_n = 50):
+
     lst_stopwords = nltk.corpus.stopwords.words("english")
 
     ## clean (convert to lowercase and remove punctuations and characters and then strip)
-    text = re.sub(r'[^\w\s]', '', str(text).lower().strip())
+    text = re.sub(r'[^\w\s]', '', str(text[:-remove_last_n]).lower().strip())
 
     ## Tokenize (convert from string to list)
     lst_text = text.split()

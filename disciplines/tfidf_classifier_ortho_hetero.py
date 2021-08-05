@@ -1,43 +1,8 @@
 '''
 This is a reproduction of:
 
-https://towardsdatascience.com/text-analysis-feature-engineering-with-nlp-502d6ea9225d
+https://towardsdatascience.com/text-classification-with-nlp-tf-idf-vs-word2vec-vs-bert-41ff868d1794
 '''
-import time
-tic = time.perf_counter()
-## for data
-import pandas as pd
-import collections
-import json
-from scipy import stats
-
-## for plotting
-import matplotlib.pyplot as plt
-import seaborn as sns
-import wordcloud
-
-## for text processing
-import re
-import nltk
-
-## for language detection
-import langdetect ## for sentiment
-from textblob import TextBlob## for ner
-import spacy
-
-## for vectorizer
-from sklearn import feature_extraction, manifold
-
-## for word embedding
-import gensim.downloader as gensim_api
-
-## for topic modeling
-import gensim
-
-import pandas as pd
-
-from tqdm import tqdm
-#tqdm.pandas()
 
 ##Set up
 import random
@@ -51,90 +16,157 @@ code_path=config['PATH']['code_path']
 project_path=config['PATH']['project']
 
 
+if config['PATH']['data_path'][0] == "C":
+    from tqdm import tqdm
+    tqdm.pandas()
+
+
+
+
+## set up
+import time
+tic = time.perf_counter()
+
+import random
+random.seed(10)
+
+import logging
+
+##config set up
+import configparser
+import os
+import sys
+
+def config():
+    config = configparser.ConfigParser()
+    config.read(os.getcwd() + '/config.ini')
+
+    data_path = config['PATH']['data_path']
+    scripts_path = config['PATH']['scripts_path']
+    project_path = config['PATH']['project_path']
+
+    sys.path.append(project_path)
+    return data_path, scripts_path, project_path
+
+if __name__ == "__main__":
+    data_path, scripts_path, project_path = config()
+
+
+##parallelization
+import multiprocessing as mp
 
 '''
-INPUT PARAMETERS HERE
+CLASSIFIER SPECIFIC IMPORTS
 '''
+## for data
+import pandas as pd
+pd.set_option('display.max_columns', None)
+
+
+## for data
+import json
+import numpy as np
+from scipy import stats
+
+## for plotting
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+## for processing
+import re
+import nltk
+
+## for language detection
+import langdetect
+
+## for bag-of-words
+from sklearn import feature_extraction, model_selection, naive_bayes, pipeline, manifold, preprocessing, feature_selection, metrics
+
+## for explainer
+from lime import lime_text
+import wordcloud
+
+## for word embedding
+import gensim
+import gensim.downloader as gensim_api
+
+## for deep learning
+from tensorflow.keras import models, layers, preprocessing as kprocessing
+from tensorflow.keras import backend as K
+
+## for bert language model
+import transformers
+
+
+
+
+
+
 ############################################
-file_name = "sample_for_damian_500"
-data_orig = pd.read_csv(data_path + "/" + file_name + ".csv")
-sample_size = len(data_orig) #10000
-field = "abstract" #"title"
-save = True #False
-min_char = 120
-##########################################
-
-sample_fraction = sample_size/len(data_orig)
-field_unidecode = field + "_unidecode"
-
-data_short = data_orig.sample(frac = sample_fraction).copy()
-
-if (save == True) & (sample_size != len(data_orig)):
-    print("we're right here")
-    data_short.to_csv(data_path + '/sample_for_damian_' + str(sample_size) + '.csv', index=False)
+logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
+print_charts_tables = True  # False #True
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+input_file_size = 10000 #10000 #"all"
+input_file_type = "csv"
+output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
+sample_size = 10000  #input_file_size #10000 #"all"
+text_field = "Abstract"  # "title" #"abstract"
+label_field = "labels"
+cores = mp.cpu_count()  #mp.cpu_count()  #2
+save = True  # False #True
+############################################
 
 
+def monitor_process():
+    ##monitor progress if run on local machine
+    if not project_path[0] == "/":
+        if __name__ == "__main__":
+            print("--LOCAL RUN--")
+
+            ##monitor progress
+            from tqdm import tqdm
+            tqdm.pandas()
+
+    if project_path[0] == "/":
+        if __name__ == "__main__":
+            print("--CLUSTER RUN--")
+
+if __name__ == "__main__":
+    monitor_process()
+
+##logs
+logging.basicConfig(level=logging_level,
+                    handlers=[logging.FileHandler("log.log"),
+                              logging.StreamHandler()],
+                    format=('%(levelname)s | '
+                            '%(asctime)s | '
+                            '%(filename)s | '
+                            '%(funcName)s() | '
+                            '%(lineno)d | \t'
+                            '%(message)s'))  # , format='%(levelname)s - %(asctime)s - %(message)s - %(name)s')
+
+logger = logging.getLogger()
+
+from Utils import utils_ortho_hetero as fcts
+
+
+if __name__ == "__main__":
+    dtf = fcts.load_data(data_path = data_path,
+                          input_file_name = input_file_name,
+                          input_file_size = input_file_size,
+                          input_file_type = input_file_type,
+                          sample_size = "all")
 
 
 
 
-
-'''
-READ DATA
-'''
-
-
-
-'''
-print("READ DATA")
-json_path = data_path + '/News_Category_Dataset_v2.json'
-
-lst_dics = []
-with open(json_path, mode='r', errors='ignore') as json_file:
-    for dic in json_file:
-        lst_dics.append( json.loads(dic) )
-
-## print the first one
-lst_dics[0]
-'''
-
-dtf = data_orig.loc[(data_orig["abstract"].str.len() > min_char) ,:].copy()
-dtf.rename(columns = {"abstract":"text", "discipline":"y"}, inplace = True)
-
-toc = time.perf_counter()
-print(f"READ DATA {file_name} in {toc-tic} seconds")
-
-
-'''
-SUBSET DATA
-'''
-print("SUBSET DATA")
-
-'''
-## create dtf with news-data
-dtf = pd.DataFrame(lst_dics)
-
-## filter categories
-dtf = dtf[dtf["category"].isin(['ENTERTAINMENT','POLITICS','TECH']) ][["category","headline"]]
-
-## rename columns
-dtf = dtf.rename(columns={"category":"y", "headline":"text"})
-
-dtf = dtf.sample(frac = 0.1)
-
-t 5 random rows
-print(dtf.sample(5))
-'''
-
-
-'''
 x = "y"
 
 fig, ax = plt.subplots()
 fig.suptitle(x, fontsize=12)
 dtf[x].reset_index().groupby(x).count().sort_values(by="index").plot(kind="barh", legend=False, ax=ax).grid(axis='x')
 plt.show()
-'''
+
 
 
 
@@ -156,25 +188,30 @@ print(txt, " --> ", langdetect.detect(txt))
 dtf['first120'] = [str(x)[:min_char] for x in dtf.loc[:,"text"]]
 dtf['last120'] = [str(x)[-min_char:] for x in dtf.loc[:,"text"]]
 
-dtf['text_beginning'] = dtf["first120"].apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
-dtf['text_end'] = dtf["last120"].apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
+if config['PATH']['data_path'][0] == "C":
+    dtf['text_beginning'] = dtf["first120"].progress_apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
+    dtf['text_end'] = dtf["last120"].progress_apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
+
+else:
+    dtf['text_beginning'] = dtf["first120"].apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
+    dtf['text_end'] = dtf["last120"].apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
+
 
 dtf.loc[dtf['text_beginning'] == dtf['text_end'], 'lang'] = dtf['text_beginning']
 dtf.loc[dtf['text_beginning'] != dtf['text_end'], 'lang'] = "unassigned"
 
-#print(dtf.head())
+print(dtf.head())
 
 
-'''
+
 x = "lang"
 
 fig, ax = plt.subplots()
 fig.suptitle(x, fontsize=12)
 dtf[x].reset_index().groupby(x).count().sort_values(by="index").plot(kind="barh", legend=False, ax=ax).grid(axis='x')
 plt.show()
+
 '''
-
-
 if save == True:
     if sample_size == len(data_orig):
         print("sample_size == len(data_orig)")
@@ -182,6 +219,7 @@ if save == True:
 
     else:
         dtf.to_csv(data_path + '/sample_for_damian_' + str(sample_size) + '_lang.csv', index=False)
+'''
 
 dtf_lang = dtf.copy()
 
@@ -191,7 +229,7 @@ dtf = dtf_lang.copy()
 dtf = dtf[dtf["lang"]=="en"]
 
 toc = time.perf_counter()
-print(f" LANGUAGE DETECTION {file_name} in {toc-tic} seconds")
+print(f" LANGUAGE DETECTION {file_name} --> {sample_size} in {toc-tic} seconds")
 
 
 
@@ -220,7 +258,7 @@ print("--- tokenization ---")
 txt = txt.split()
 print(txt)
 '''
-nltk.download('stopwords')
+#nltk.download('stopwords')
 lst_stopwords = nltk.corpus.stopwords.words("english")
 #print(lst_stopwords)
 
@@ -276,7 +314,11 @@ def utils_preprocess_text(text, flg_stemm=False, flg_lemm=True, lst_stopwords=No
     text = " ".join(lst_text)
     return text
 
-dtf["text_clean"] = dtf["text"].apply(lambda x: utils_preprocess_text(x, flg_stemm=False, flg_lemm=True, lst_stopwords=lst_stopwords))
+if config['PATH']['data_path'][0] == "C":
+    dtf["text_clean"] = dtf["text"].progress_apply(lambda x: utils_preprocess_text(x, flg_stemm=False, flg_lemm=True, lst_stopwords=lst_stopwords))
+
+else:
+    dtf["text_clean"] = dtf["text"].apply(lambda x: utils_preprocess_text(x, flg_stemm=False, flg_lemm=True, lst_stopwords=lst_stopwords))
 
 #print(dtf.head())
 '''
@@ -290,7 +332,7 @@ dtf = dtf_preproc.copy()
 
 
 toc = time.perf_counter()
-print(f" TEXT PREPROCESSING {file_name} in {toc-tic} seconds")
+print(f" TEXT PREPROCESSING {file_name} --> {sample_size} in {toc-tic} seconds")
 
 
 
@@ -304,6 +346,8 @@ print(f" TEXT PREPROCESSING {file_name} in {toc-tic} seconds")
 '''
 LENGTH ANALYSIS
 '''
+
+
 print("LENGTH ANALYSIS")
 
 dtf['word_count'] = dtf["text"].apply(lambda x: len(str(x).split(" ")))
@@ -362,7 +406,7 @@ dtf_lengths = dtf.copy()
 
 ### Starting point
 dtf = dtf_lengths.copy()
-
+'''
 if save == True:
     if sample_size == len(data_orig):
         print("sample_size == len(data_orig)")
@@ -370,15 +414,17 @@ if save == True:
 
     else:
         dtf.to_csv(data_path + '/sample_for_damian_' + str(sample_size) + '_preproc.csv', index=False)
-
+'''
 
 
 toc = time.perf_counter()
-print(f" LENGTH ANALYSIS {file_name} in {toc-tic} seconds")
+print(f" LENGTH ANALYSIS {file_name} --> {sample_size} in {toc-tic} seconds")
 
 
+dtf_length = dtf.copy()
 
-
+### Starting point
+dtf = dtf_length.copy()
 
 
 
@@ -660,6 +706,188 @@ dtf_topics = dtf.copy()
 dtf = dtf_topics.copy()
 
 '''
+
+'''
+TRAIN TEST SPLIT
+'''
+## split dataset
+dtf_train, dtf_test = model_selection.train_test_split(dtf, test_size=0.3)
+
+## get target
+y_train = dtf_train["y"].values
+y_test = dtf_test["y"].values
+
+
+'''
+BAG OF WORDS
+'''
+
+#FEATURE ENGINEERING
+
+## Count (classic BoW)
+vectorizer = feature_extraction.text.CountVectorizer(max_features=10000, ngram_range=(1,2))
+
+## Tf-Idf (advanced variant of BoW)
+vectorizer = feature_extraction.text.TfidfVectorizer(max_features=10000, ngram_range=(1,2))
+
+corpus = dtf_train["text_clean_short"]
+
+vectorizer.fit(corpus)
+X_train = vectorizer.transform(corpus)
+dic_vocabulary = vectorizer.vocabulary_
+
+sns.heatmap(X_train.todense()[:,np.random.randint(0,X_train.shape[1],100)]==0, vmin=0, vmax=1, cbar=False).set_title('Sparse Matrix Sample')
+
+'''
+word = "new york"
+
+dic_vocabulary[word]
+'''
+
+#FEATURE SELECTION
+y = dtf_train["y"]
+X_names = vectorizer.get_feature_names()
+p_value_limit = 0.95
+
+dtf_features = pd.DataFrame()
+for cat in np.unique(y):
+    chi2, p = feature_selection.chi2(X_train, y==cat)
+    dtf_features = dtf_features.append(pd.DataFrame(
+                   {"feature":X_names, "score":1-p, "y":cat}))
+    dtf_features = dtf_features.sort_values(["y","score"],
+                    ascending=[True,False])
+    dtf_features = dtf_features[dtf_features["score"]>p_value_limit]
+
+X_names = dtf_features["feature"].unique().tolist()
+
+
+'''
+for cat in np.unique(y):
+   print("# {}:".format(cat))
+   print("  . selected features:",
+         len(dtf_features[dtf_features["y"]==cat]))
+   print("  . top features:", ",".join(
+dtf_features[dtf_features["y"]==cat]["feature"].values[:10]))
+   print(" ")
+'''
+
+
+#shorter
+vectorizer = feature_extraction.text.TfidfVectorizer(vocabulary=X_names)
+
+vectorizer.fit(corpus)
+X_train = vectorizer.transform(corpus)
+dic_vocabulary = vectorizer.vocabulary_
+
+
+#classify
+classifier = naive_bayes.MultinomialNB()
+
+## pipeline
+model = pipeline.Pipeline([("vectorizer", vectorizer),
+                           ("classifier", classifier)])
+
+## train classifier
+model["classifier"].fit(X_train, y_train)
+
+## test
+X_test = dtf_test["text_clean_short"].values
+predicted = model.predict(X_test)
+predicted_prob = model.predict_proba(X_test)
+
+classes = np.unique(y_test)
+y_test_array = pd.get_dummies(y_test, drop_first=False).values
+
+## Accuracy, Precision, Recall
+accuracy = metrics.accuracy_score(y_test, predicted)
+auc = metrics.roc_auc_score(y_test, predicted_prob,multi_class="ovr")
+print("Accuracy:", round(accuracy, 2))
+print("Auc:", round(auc, 2))
+print("Detail:")
+print(metrics.classification_report(y_test, predicted))
+
+## Plot confusion matrix
+cm = metrics.confusion_matrix(y_test, predicted)
+fig, ax = plt.subplots()
+sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues,cbar=False)
+ax.set(xlabel="Pred", ylabel="True", xticklabels=classes,yticklabels=classes, title="Confusion matrix")
+plt.yticks(rotation=0)
+fig, ax = plt.subplots(nrows=1, ncols=2)
+
+## Plot roc
+for i in range(len(classes)):
+    fpr, tpr, thresholds = metrics.roc_curve(y_test_array[:, i],predicted_prob[:, i])
+    ax[0].plot(fpr, tpr, lw=3,label='{0} (area={1:0.2f})'.format(classes[i],metrics.auc(fpr, tpr)))
+ax[0].plot([0, 1], [0, 1], color='navy', lw=3, linestyle='--')
+ax[0].set(xlim=[-0.05, 1.0], ylim=[0.0, 1.05],
+          xlabel='False Positive Rate',
+          ylabel="True Positive Rate (Recall)",
+          title="Receiver operating characteristic")
+ax[0].legend(loc="lower right")
+ax[0].grid(True)
+
+## Plot precision-recall curve
+for i in range(len(classes)):
+    precision, recall, thresholds = metrics.precision_recall_curve(y_test_array[:, i], predicted_prob[:, i])
+    ax[1].plot(recall, precision, lw=3,label='{0} (area={1:0.2f})'.format(classes[i],metrics.auc(recall, precision)))
+ax[1].set(xlim=[0.0, 1.05], ylim=[0.0, 1.05], xlabel='Recall',ylabel="Precision", title="Precision-Recall curve")
+ax[1].legend(loc="best")
+ax[1].grid(True)
+plt.show()
+
+## select observation
+i = 5 #5 is a good example
+txt_instance = dtf_test["text"].iloc[i]
+
+## check true value and predicted value
+print("True:", y_test[i], "--> Pred:", predicted[i], "| Prob:", round(np.max(predicted_prob[i]),2))
+
+## show explanation
+explainer = lime_text.LimeTextExplainer(class_names=np.unique(y_train))
+explained = explainer.explain_instance(txt_instance, model.predict_proba, num_features=9, top_labels=3)
+explained.show_in_notebook(text=txt_instance, predict_proba=False)
+explained.save_to_file('lime.html')
+
+
+
+'''
+WORD FREQUENCY
+'''
+print("WORD FREQUENCY")
+
+
+top = 10
+y = 0
+corpus = dtf[dtf["y"] == y]["text_clean"]
+lst_tokens = nltk.tokenize.word_tokenize(corpus.str.cat(sep=" "))
+fig, ax = plt.subplots(nrows=1, ncols=2)
+fig.suptitle("Most frequent words", fontsize=15)
+
+## unigrams
+dic_words_freq = nltk.FreqDist(lst_tokens)
+dtf_uni = pd.DataFrame(dic_words_freq.most_common(), columns=["Word", "Freq"])
+dtf_uni.set_index("Word").iloc[:top, :].sort_values(by="Freq").plot(kind="barh", title="Unigrams", ax=ax[0], legend=False).grid(axis='x')
+ax[0].set(ylabel=None)
+
+## bigrams
+dic_words_freq = nltk.FreqDist(nltk.ngrams(lst_tokens, 2))
+dtf_bi = pd.DataFrame(dic_words_freq.most_common(),columns=["Word", "Freq"])
+dtf_bi["Word"] = dtf_bi["Word"].apply(lambda x: " ".join(string for string in x))
+dtf_bi.set_index("Word").iloc[:top, :].sort_values(by="Freq").plot(kind="barh", title="Bigrams", ax=ax[1],legend=False).grid(axis='x')
+ax[1].set(ylabel=None)
+plt.show()
+
+
+'''
+wc = wordcloud.WordCloud(background_color='black', max_words=100, max_font_size=35)
+wc = wc.generate(str(corpus))
+fig = plt.figure(num=1)
+plt.axis('off')
+plt.imshow(wc, cmap=None)
+plt.show()
+'''
+
+
 
 toc = time.perf_counter()
 print(f"whole script for {len(data_short)} in {toc-tic} seconds")

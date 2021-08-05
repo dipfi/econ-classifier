@@ -4,60 +4,127 @@ This is a reproduction of:
 https://towardsdatascience.com/text-analysis-feature-engineering-with-nlp-502d6ea9225d
 '''
 
-## for data
-import pandas as pd
-import collections
-import json
+## set up
+import time
+tic = time.perf_counter()
 
-## for plotting
-import matplotlib.pyplot as plt
-import seaborn as sns
-import wordcloud
-
-## for text processing
-import re
-import nltk
-
-## for language detection
-import langdetect ## for sentiment
-from textblob import TextBlob## for ner
-import spacy
-
-## for vectorizer
-from sklearn import feature_extraction, manifold
-
-## for word embedding
-import gensim.downloader as gensim_api
-
-## for topic modeling
-import gensim
-
-import pandas as pd
-
-from tqdm import tqdm
-tqdm.pandas()
-
-##Set up
 import random
 random.seed(10)
+
+import logging
+
+##config set up
 import configparser
-config = configparser.ConfigParser()
 import os
-config.read(os.getcwd()+'/code/config.ini')
-data_path=config['PATH']['data_path']
-code_path=config['PATH']['code_path']
-project_path=config['PATH']['project']
+import sys
+
+def config():
+    config = configparser.ConfigParser()
+    config.read(os.getcwd() + '/config.ini')
+
+    data_path = config['PATH']['data_path']
+    scripts_path = config['PATH']['scripts_path']
+    project_path = config['PATH']['project_path']
+
+    sys.path.append(project_path)
+    return data_path, scripts_path, project_path
+
+if __name__ == "__main__":
+    data_path, scripts_path, project_path = config()
 
 
+##parallelization
+import multiprocessing as mp
+
+##downloading wordlist in main
+import nltk
+
 '''
-INPUT PARAMETERS HERE
+DISCIPLINES SPECIFIC IMPORTS
 '''
-'''
+## for data
+import pandas as pd
+
+pd.set_option('display.max_columns', None)
+# import collections
+# import json
+# from scipy import stats
+
+## for plotting
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+# import wordcloud
+
+## for text processing
+# import re
+# import nltk
+
+## for language detection
+import langdetect
+
+## for sentiment
+# from textblob import TextBlob
+
+## for ner
+# import spacy
+
+## for vectorizer
+# from sklearn import feature_extraction, manifold
+
+## for word embedding
+# import gensim.downloader as gensim_api
+
+## for topic modeling
+# import gensim
+
 ############################################
-file_name = "sample_for_damian_lang_10000.csv"
-data_orig = pd.read_csv(data_path + "/" + file_name)
+logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
+print_charts_tables = True  # False #True
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+input_file_size = 500 #10000 #"all"
+input_file_type = "csv"
+output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+sample_size = 500  #input_file_size #10000 #"all"
+text_field = "text_clean"  # "title" #"abstract"
+label_field = "labels"
+#remove_last_n = 50 #remove 45 for elsevier copyright
+cores = mp.cpu_count()  #mp.cpu_count()  #2
+save = False  # False #True
 ############################################
-'''
+
+
+def monitor_process():
+    ##monitor progress if run on local machine
+    if not project_path[0] == "/":
+        if __name__ == "__main__":
+            print("--LOCAL RUN--")
+
+            ##monitor progress
+            from tqdm import tqdm
+
+            tqdm.pandas()
+
+    if project_path[0] == "/":
+        if __name__ == "__main__":
+            print("--CLUSTER RUN--")
+
+if __name__ == "__main__":
+    monitor_process()
+
+##logs
+logging.basicConfig(level=logging_level,
+                    handlers=[logging.FileHandler("log.log"),
+                              logging.StreamHandler()],
+                    format=('%(levelname)s | '
+                            '%(asctime)s | '
+                            '%(filename)s | '
+                            '%(funcName)s() | '
+                            '%(lineno)d | \t'
+                            '%(message)s'))  # , format='%(levelname)s - %(asctime)s - %(message)s - %(name)s')
+
+logger = logging.getLogger()
+
+from Utils import utils_ortho_hetero as fcts
 
 '''
 READ DATA

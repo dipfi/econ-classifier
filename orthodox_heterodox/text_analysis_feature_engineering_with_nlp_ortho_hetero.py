@@ -1,259 +1,166 @@
-'''
-This is a reproduction of:
+## set up
+import time
+tic = time.perf_counter()
 
-https://towardsdatascience.com/text-analysis-feature-engineering-with-nlp-502d6ea9225d
-'''
-
-## for data
-import pandas as pd
-import collections
-import json
-
-## for plotting
-import matplotlib.pyplot as plt
-import seaborn as sns
-import wordcloud
-
-## for text processing
-import re
-import nltk
-
-## for language detection
-import langdetect ## for sentiment
-from textblob import TextBlob## for ner
-import spacy
-
-## for vectorizer
-from sklearn import feature_extraction, manifold
-
-## for word embedding
-import gensim.downloader as gensim_api
-
-## for topic modeling
-import gensim
-
-import pandas as pd
-
-from tqdm import tqdm
-tqdm.pandas()
-
-##Set up
 import random
 random.seed(10)
+
+import logging
+
+##config set up
 import configparser
-config = configparser.ConfigParser()
 import os
-config.read(os.getcwd()+'/code/config.ini')
-data_path=config['PATH']['data_path']
-code_path=config['PATH']['code_path']
-project_path=config['PATH']['project']
+import sys
+
+def config():
+    config = configparser.ConfigParser()
+    config.read(os.getcwd() + '/config.ini')
+
+    data_path = config['PATH']['data_path']
+    scripts_path = config['PATH']['scripts_path']
+    project_path = config['PATH']['project_path']
+
+    sys.path.append(project_path)
+    return data_path, scripts_path, project_path
+
+if __name__ == "__main__":
+    data_path, scripts_path, project_path = config()
 
 
+##parallelization
+import multiprocessing as mp
+
+##downloading wordlist in main
+import nltk
+
 '''
-INPUT PARAMETERS HERE
+DISCIPLINES SPECIFIC IMPORTS
 '''
-'''
+## for data
+import pandas as pd
+
+pd.set_option('display.max_columns', None)
+
+
+
 ############################################
-file_name = "sample_for_damian_lang_10000.csv"
-data_orig = pd.read_csv(data_path + "/" + file_name)
+logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
+print_charts_tables = True  # False #True
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+input_file_size = 10000 #10000 #"all"
+input_file_type = "csv"
+output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
+sample_size = 10000  #input_file_size #10000 #"all"
+text_field = "Abstract"  # "title" #"abstract"
+label_field = "labels"
+cores = mp.cpu_count()  #mp.cpu_count()  #2
+save = True  # False #True
 ############################################
-'''
-
-'''
-READ DATA
-'''
-
-print("READ DATA")
-json_path = data_path + '/News_Category_Dataset_v2.json'
-
-lst_dics = []
-with open(json_path, mode='r', errors='ignore') as json_file:
-    for dic in json_file:
-        lst_dics.append( json.loads(dic) )
-
-## print the first one
-lst_dics[0]
-'''
-'''
-data_orig = data_orig.loc[~data_orig["language_short"].isin(["none","multiple"]),["abstract", "discipline"]]
-data_orig.rename(columns = {"abstract":"text", "discipline":"y"}, inplace = True)
-'''
-'''
-SUBSET DATA
-'''
-print("SUBSET DATA")
-## create dtf with news-data
-dtf = pd.DataFrame(lst_dics)
-
-## filter categories
-dtf = dtf[dtf["category"].isin(['ENTERTAINMENT','POLITICS','TECH']) ][["category","headline"]]
-
-## rename columns
-dtf = dtf.rename(columns={"category":"y", "headline":"text"})
-
-dtf = dtf.sample(frac = 0.1)
-
-# t 5 random rows
-print(dtf.sample(5))
-
-'''
-x = "y"
-
-fig, ax = plt.subplots()
-fig.suptitle(x, fontsize=12)
-dtf[x].reset_index().groupby(x).count().sort_values(by=
-       "index").plot(kind="barh", legend=False,
-        ax=ax).grid(axis='x')
-plt.show()
-'''
 
 
-'''
-LANGUAGE DETECTION
-'''
-print("LANGUAGE DETECTION")
-'''
-txt = dtf["text"].iloc[0]
+def monitor_process():
+    ##monitor progress if run on local machine
+    if not project_path[0] == "/":
+        if __name__ == "__main__":
+            print("--LOCAL RUN--")
 
-print(txt, " --> ", langdetect.detect(txt))
-'''
+            ##monitor progress
+            from tqdm import tqdm
+            tqdm.pandas()
 
-dtf['lang'] = dtf["text"].process_apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
+    if project_path[0] == "/":
+        if __name__ == "__main__":
+            print("--CLUSTER RUN--")
 
-print(dtf.head())
+if __name__ == "__main__":
+    monitor_process()
 
-'''
-x = "lang"
+##logs
+logging.basicConfig(level=logging_level,
+                    handlers=[logging.FileHandler("log.log"),
+                              logging.StreamHandler()],
+                    format=('%(levelname)s | '
+                            '%(asctime)s | '
+                            '%(filename)s | '
+                            '%(funcName)s() | '
+                            '%(lineno)d | \t'
+                            '%(message)s'))  # , format='%(levelname)s - %(asctime)s - %(message)s - %(name)s')
 
-fig, ax = plt.subplots()
-fig.suptitle(x, fontsize=12)
-dtf[x].reset_index().groupby(x).count().sort_values(by=
-       "index").plot(kind="barh", legend=False,
-        ax=ax).grid(axis='x')
-plt.show()
-'''
+logger = logging.getLogger()
 
-dtf = dtf[dtf["lang"]=="en"]
-
-
-'''
-TEXT PREPROCESSING
-'''
-print("TEXT PREPROCESSING")
-'''
-print("--- original ---")
-print(txt)
-
-print("--- cleaning ---")
-txt = re.sub(r'[^\w\s]', '', str(txt).lower().strip())
-print(txt)
-
-print("--- tokenization ---")
-txt = txt.split()
-print(txt)
-'''
-
-lst_stopwords = nltk.corpus.stopwords.words("english")
-#print(lst_stopwords)
-
-'''
-print("--- remove stopwords ---")
-txt = [word for word in txt if word not in lst_stopwords]
-print(txt)
-
-print("--- stemming ---")
-ps = nltk.stem.porter.PorterStemmer()
-print([ps.stem(word) for word in txt])
-
-print("--- lemmatisation ---")
-lem = nltk.stem.wordnet.WordNetLemmatizer()
-print([lem.lemmatize(word) for word in txt])
-'''
-
-'''
-Preprocess a string.
-:parameter
-    :param text: string - name of column containing text
-    :param lst_stopwords: list - list of stopwords to remove
-    :param flg_stemm: bool - whether stemming is to be applied
-    :param flg_lemm: bool - whether lemmitisation is to be applied
-:return
-    cleaned text
-'''
+from Utils import utils_ortho_hetero as fcts
 
 
-def utils_preprocess_text(text, flg_stemm=False, flg_lemm=True, lst_stopwords=None):
-    ## clean (convert to lowercase and remove punctuations and characters and then strip)
-    text = re.sub(r'[^\w\s]', '', str(text).lower().strip())
-
-    ## Tokenize (convert from string to list)
-    lst_text = text.split()
-
-    ## remove Stopwords
-    if lst_stopwords is not None:
-        lst_text = [word for word in lst_text if word not in
-                    lst_stopwords]
-
-    ## Stemming (remove -ing, -ly, ...)
-    if flg_stemm == True:
-        ps = nltk.stem.porter.PorterStemmer()
-        lst_text = [ps.stem(word) for word in lst_text]
-
-    ## Lemmatisation (convert the word into root word)
-    if flg_lemm == True:
-        lem = nltk.stem.wordnet.WordNetLemmatizer()
-        lst_text = [lem.lemmatize(word) for word in lst_text]
-
-    ## back to string from list
-    text = " ".join(lst_text)
-    return text
-
-dtf["text_clean"] = dtf["text"].process_apply(lambda x: utils_preprocess_text(x, flg_stemm=False, flg_lemm=True, lst_stopwords=lst_stopwords))
+if __name__ == "__main__":
+    dtf = fcts.load_data(data_path = data_path,
+                          input_file_name = input_file_name,
+                          input_file_size = input_file_size,
+                          input_file_type = input_file_type,
+                          sample_size = "all")
 
 
-print(dtf.head())
-'''
-print(dtf["text"].iloc[0], " --> ", dtf["text_clean"].iloc[0])
-'''
+
 
 
 
 '''
 LENGTH ANALYSIS
 '''
+
 print("TLENGTH ANALYSIS")
 
-dtf['word_count'] = dtf["text"].process_apply(lambda x: len(str(x).split(" ")))
+dtf['word_count'] = dtf["text"].progress_apply(lambda x: len(str(x).split(" ")))
 
-dtf['char_count'] = dtf["text"].process_apply(lambda x: sum(len(word) for word in str(x).split(" ")))
+dtf['char_count'] = dtf["text"].progress_apply(lambda x: sum(len(word) for word in str(x).split(" ")))
 
-dtf['sentence_count'] = dtf["text"].process_apply(lambda x: len(str(x).split(".")))
+dtf['sentence_count'] = dtf["text"].progress_apply(lambda x: len(str(x).split(".")))
 
 dtf['avg_word_length'] = dtf['char_count'] / dtf['word_count']
 
 dtf['avg_sentence_lenght'] = dtf['word_count'] / dtf['sentence_count']
 
-print(dtf.head())
+dtf.groupby(by="y")[["avg_word_length","avg_sentence_lenght", "sentence_count", "word_count"]].mean()
 
 
-'''
-x, y = "char_count", "y"
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-fig, ax = plt.subplots(nrows=1, ncols=2)
+
+x, y = "avg_word_length", "y"
+fig, ax = plt.subplots(nrows=1, ncols=1)
 fig.suptitle(x, fontsize=12)
 for i in dtf[y].unique():
-    sns.distplot(dtf[dtf[y]==i][x], hist=True, kde=False,
-                 bins=10, hist_kws={"alpha":0.8},
-                 axlabel="histogram", ax=ax[0])
-    sns.distplot(dtf[dtf[y]==i][x], hist=False, kde=True,
-                 kde_kws={"shade":True}, axlabel="density",
-                 ax=ax[1])
-ax[0].grid(True)
-ax[0].legend(dtf[y].unique())
-ax[1].grid(True)
+    sns.distplot(dtf[dtf[y] == i][x], hist=False, kde=True,
+                 kde_kws={"shade": True}, axlabel="density")
+ax.legend(dtf[y].unique())
 plt.show()
-'''
 
+x, y = "avg_sentence_lenght", "y"
+fig, ax = plt.subplots(nrows=1, ncols=1)
+fig.suptitle(x, fontsize=12)
+for i in dtf[y].unique():
+    sns.distplot(dtf[dtf[y] == i][x], hist=False, kde=True,
+                 kde_kws={"shade": True}, axlabel="density")
+ax.legend(dtf[y].unique())
+plt.show()
+
+x, y = "sentence_count", "y"
+fig, ax = plt.subplots(nrows=1, ncols=1)
+fig.suptitle(x, fontsize=12)
+for i in dtf[y].unique():
+    sns.distplot(dtf[dtf[y] == i][x], hist=False, kde=True,
+                 kde_kws={"shade": True}, axlabel="density")
+ax.legend(dtf[y].unique())
+plt.show()
+
+x, y = "word_count", "y"
+fig, ax = plt.subplots(nrows=1, ncols=1)
+fig.suptitle(x, fontsize=12)
+for i in dtf[y].unique():
+    sns.distplot(dtf[dtf[y] == i][x], hist=False, kde=True,
+                 kde_kws={"shade": True}, axlabel="density")
+ax.legend(dtf[y].unique())
+plt.show()
 
 
 
@@ -261,12 +168,35 @@ plt.show()
 '''
 SENTIMENT ANALYSIS
 '''
+
+## for sentiment
+from textblob import TextBlob
+
 print("SENTIMENT ANALYSIS")
 
-dtf["sentiment"] = dtf["text_clean"].process_apply(lambda x: TextBlob(x).sentiment.polarity)
-print(dtf.head())
+dtf["polarity"] = dtf["text_clean"].progress_apply(lambda x: TextBlob(x).sentiment.polarity) #-1 = negative, +1=positive
+dtf["subjectivity"] = dtf["text_clean"].progress_apply(lambda x: TextBlob(x).sentiment.subjectivity) #0 = objective, 1=subjective
+dtf.groupby(by="y")[["polarity", "subjectivity"]].mean()
 
-print(dtf["text"].iloc[0], " --> ", dtf["sentiment"].iloc[0])
+x, y = "polarity", "y"
+fig, ax = plt.subplots(nrows=1, ncols=1)
+fig.suptitle(x, fontsize=12)
+for i in dtf[y].unique():
+    sns.distplot(dtf[dtf[y] == i][x], hist=False, kde=True,
+                 kde_kws={"shade": True}, axlabel="density")
+ax.legend(dtf[y].unique())
+plt.show()
+
+x, y = "subjectivity", "y"
+fig, ax = plt.subplots(nrows=1, ncols=1)
+fig.suptitle(x, fontsize=12)
+for i in dtf[y].unique():
+    sns.distplot(dtf[dtf[y] == i][x], hist=False, kde=True,
+                 kde_kws={"shade": True}, axlabel="density")
+ax.legend(dtf[y].unique())
+plt.show()
+
+
 
 
 ## call model
@@ -313,6 +243,9 @@ def utils_ner_features(lst_dics_tuples, tag):
         return dic_counter[tag]
     else:
         return 0
+
+
+
 
 ## extract features
 tags_set = []

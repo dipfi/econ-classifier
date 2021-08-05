@@ -81,6 +81,7 @@ output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
 sample_size = "all"  #input_file_size #10000 #"all"
 text_field = "Abstract"  # "title" #"abstract"
 label_field = "labels"
+#remove_last_n = 50 #remove 45 for elsevier copyright
 min_char = 120
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = True  # False #True
