@@ -23,6 +23,9 @@ def load_data(data_path,
               input_file_size,
               input_file_type,
               sample_size):
+
+    logger.info("Function started: load_data")
+
     if input_file_size == "all":
         input_file_fullname = input_file_name + "." + input_file_type
     else:
@@ -40,6 +43,7 @@ def load_data(data_path,
 
     logger.info("Data loaded")
     return dtf
+    logger.info("Function ended: load_data")
 
 
 
@@ -47,6 +51,7 @@ def save_data_csv(dtf,
                   data_path,
                   output_file_name,
                   sample_size):
+    logger.info("Function started: save_data_csv")
 
     if sample_size == "all":
         new_sample_file_name = data_path + '/' + output_file_name + '.csv'
@@ -56,15 +61,23 @@ def save_data_csv(dtf,
     logging.info("SAVING NEW SAMPLE FILE: " + new_sample_file_name)
     dtf.to_csv(new_sample_file_name, index=False)
 
+    logger.info("Function ended: save_data_csv")
+
 
 
 def rename_fields(dtf,
                    text_field,
                    label_field):
+    logger.info("Function started: rename_fields")
+
+    dtf["Journal"] = dtf["Source Title"]
+    dtf["Journal"][dtf["Book Series Title"]=="Advances in Austrian Economics"] = dtf["Book Series Title"]
 
     dtf.rename(columns = {text_field:"text", label_field:"y"}, inplace=True)
 
     return dtf
+
+    logger.info("Function ended: rename_fields")
 
 
 
@@ -74,12 +87,15 @@ def rename_fields(dtf,
 
 def split_text(dtf,
                min_char):
+    logger.info("Function started: split_text")
 
-        dtf = dtf.loc[(dtf["text"].str.len() > min_char) ,:].copy()
-        dtf['first_part'] = [str(x)[:min_char] for x in dtf.loc[:,"text"]]
-        dtf['last_part'] = [str(x)[-min_char:] for x in dtf.loc[:,"text"]]
+    dtf = dtf.loc[(dtf["text"].str.len() > min_char) ,:].copy()
+    dtf['first_part'] = [str(x)[:min_char] for x in dtf.loc[:,"text"]]
+    dtf['last_part'] = [str(x)[-min_char:] for x in dtf.loc[:,"text"]]
 
-        return dtf
+    return dtf
+
+    logger.info("Function ended: split_text")
 
 
 
@@ -125,6 +141,7 @@ def language_detection_wrapper(dtf,
                                min_char,
                                cores,
                                function):
+    logger.info("Function started: language_detection_wrapper")
 
     #import logging
     #logger = logging.getLogger("__main__")
@@ -146,6 +163,7 @@ def language_detection_wrapper(dtf,
 
     return dtf
 
+    logger.info("Function ended: language_detection_wrapper")
 
 
 
@@ -172,8 +190,11 @@ def utils_preprocess_text(text,
 
     lst_stopwords = nltk.corpus.stopwords.words("english")
 
+    subtitles = ["design", "methodology", "approach", "originality", "value", "limitations", "implications"]
+    lst_stopwords.extend(subtitles)
+
     ## clean (convert to lowercase and remove punctuations and characters and then strip)
-    text = re.sub(r'[^\w\s]', '', str(text[:-remove_last_n]).lower().strip())
+    text = re.sub(r'[^\w\s]', ' ', str(text[:-remove_last_n]).lower().strip())
 
     ## Tokenize (convert from string to list)
     lst_text = text.split()
@@ -202,6 +223,8 @@ def utils_preprocess_text(text,
 def preprocessing_wrapper(dtf,
                           cores,
                           function=utils_preprocess_text):
+    logger.info("Function started: preprocessing_wrapper")
+
     #import logging
     #logger = logging.getLogger("__main__")
 
@@ -214,3 +237,5 @@ def preprocessing_wrapper(dtf,
     dtf["text_clean"] = proproc_series
 
     return dtf
+
+    logger.info("Function ended: preprocessing_wrapper")

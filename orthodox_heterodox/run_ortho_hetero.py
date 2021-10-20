@@ -154,12 +154,13 @@ def main():
                           min_char=min_char)
     # logger.info("Data Languages Head:\n" + str(dtf.head()) + "\n")
 
+    '''
     dtf = fcts.language_detection_wrapper(dtf=dtf,
                                           min_char=min_char,
                                           cores=cores,
                                           function=langdetect.detect)
     # logger.info("Data Languages Head:\n" + str(dtf.head()) + "\n")
-
+    '''
     #lst_stopwords = fcts.load_stopwords()
 
     dtf = fcts.preprocessing_wrapper(dtf=dtf, cores=cores)

@@ -36,6 +36,7 @@ if __name__ == "__main__":
 ##parallelization
 import multiprocessing as mp
 
+
 '''
 CLASSIFIER SPECIFIC IMPORTS
 '''
@@ -95,12 +96,12 @@ print_charts_tables = True  # False #True
 input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
-output_file_name = "tfidf_classifier_performance_per_journal"
+output_file_name = "tfidf_classifier_performance_per_journal_new"
 sample_size = "all"  #input_file_size #10000 #"all"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
-cores = mp.cpu_count()  #mp.cpu_count()  #2
+cores = mp.cpu_count()/2  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
 sentiment = False
@@ -287,7 +288,7 @@ dtf_heterodox = dtf[dtf[label_field]=="heterodox"]
 dtf_samequality = dtf_samequality.sample(n=len(dtf_heterodox))
 dtf = pd.concat([dtf_heterodox, dtf_samequality])
 
-all_journals = dtf[["Source Title", label_field]].drop_duplicates().copy()
+all_journals = dtf[["Journal", label_field]].drop_duplicates().copy()
 
 '''TEST'''
 #all_journals = all_journals.sample(n = 4)
@@ -299,14 +300,14 @@ for index, test_journal in all_journals.iterrows():
     count += 1
     logger.info("For Loop " + str(count) + " started")
 
-    all_test = test_journal["Source Title"]
+    all_test = test_journal["Journal"]
 
-    logger.info("Test Journal: " + test_journal["Source Title"])
+    logger.info("Test Journal: " + test_journal["Journal"])
     logger.info("Test Journal label: " + test_journal[label_field])
 
     ## split dataset
-    dtf_test = dtf[dtf["Source Title"] == all_test]
-    dtf_train = dtf[dtf["Source Title"] != all_test]
+    dtf_test = dtf[dtf["Journal"] == all_test]
+    dtf_train = dtf[dtf["Journal"] != all_test]
 
     dtf_train = dtf_train[[text_field_clean, label_field]]
     dtf_test = dtf_test[[text_field_clean, label_field]]
@@ -315,7 +316,7 @@ for index, test_journal in all_journals.iterrows():
 
 
 
-    #balanbce dataset
+    #balance dataset
     logger.info("BALANCE TRAINING SET")
 
     under_sampler = RandomUnderSampler(random_state=42)
