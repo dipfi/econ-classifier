@@ -1,12 +1,34 @@
-import pandas as pd
+'''
+This is a reproduction of:
 
-data = {'first_column':  ['A', 'B', 'C'],
-        'second_column': ['X','Y','Z']
-        }
+https://towardsdatascience.com/text-classification-with-nlp-tf-idf-vs-word2vec-vs-bert-41ff868d1794
+'''
 
-df = pd.DataFrame(data)
+## set up
+import time
+tic = time.perf_counter()
 
-df["first_column"][df["second_column"]=="X"] = 0
+import random
+random.seed(10)
 
-print (df)
+import logging
 
+##config set up
+import configparser
+import os
+import sys
+
+def config():
+    config = configparser.ConfigParser()
+    config.read(os.getcwd() + '/config.ini')
+
+    data_path = config['PATH']['data_path']
+    scripts_path = config['PATH']['scripts_path']
+    project_path = config['PATH']['project_path']
+
+    sys.path.append(project_path)
+    return data_path, scripts_path, project_path
+
+
+if __name__ == "__main__":
+    data_path, scripts_path, project_path = config()

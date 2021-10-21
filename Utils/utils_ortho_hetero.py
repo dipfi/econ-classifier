@@ -54,7 +54,7 @@ def save_data_csv(dtf,
     logger.info("Function started: save_data_csv")
 
     if sample_size == "all":
-        new_sample_file_name = data_path + '/' + output_file_name + '.csv'
+        data_path + '/' + output_file_name + '.csv'
     else:
         new_sample_file_name = data_path + '/' + output_file_name + "_" + str(sample_size) + '.csv'
 

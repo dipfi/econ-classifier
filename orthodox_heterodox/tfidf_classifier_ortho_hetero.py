@@ -472,7 +472,7 @@ if plot == 1 or plot == 2:
     cm = metrics.confusion_matrix(y_test, predicted)
     fig, ax = plt.subplots()
     sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues,cbar=False)
-    ax.set(xlabel="Pred", ylabel="True", xticklabels=classes,yticklabels=classes, title="Confusion matrix")
+    ax.set(xlabel="Pred", ylabel="True", xticklabels=classes, yticklabels=classes, title="Confusion matrix")
     plt.yticks(rotation=0)
     fig, ax = plt.subplots(nrows=1, ncols=2)
 
@@ -564,6 +564,8 @@ if plot == 2:
     dtf_bi.set_index("Word").iloc[:top, :].sort_values(by="Freq").plot(kind="barh", title="Bigrams", ax=ax[1],legend=False).grid(axis='x')
     ax[1].set(ylabel=None)
     plt.show()
+
+
 
 '''
 wc = wordcloud.WordCloud(background_color='black', max_words=100, max_font_size=35)
