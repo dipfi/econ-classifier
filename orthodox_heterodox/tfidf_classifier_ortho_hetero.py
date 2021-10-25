@@ -50,8 +50,8 @@ import numpy as np
 from scipy import stats
 
 ## for plotting
-import matplotlib as mpl
-mpl.use('TkAgg')
+#import matplotlib as mpl
+#mpl.use('TkAgg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -168,11 +168,11 @@ LENGTH ANALYSIS
 
 logger.info("LENGTH ANALYSIS")
 
-dtf['word_count'] = dtf[text_field].progress_apply(lambda x: len(str(x).split(" ")))
+dtf['word_count'] = dtf[text_field].apply(lambda x: len(str(x).split(" ")))
 
-dtf['char_count'] = dtf[text_field].progress_apply(lambda x: sum(len(word) for word in str(x).split(" ")))
+dtf['char_count'] = dtf[text_field].apply(lambda x: sum(len(word) for word in str(x).split(" ")))
 
-dtf['sentence_count'] = dtf[text_field].progress_apply(lambda x: len(str(x).split(".")))
+dtf['sentence_count'] = dtf[text_field].apply(lambda x: len(str(x).split(".")))
 
 dtf['avg_word_length'] = dtf['char_count'] / dtf['word_count']
 
@@ -233,8 +233,8 @@ if sentiment == True:
 
     print("SENTIMENT ANALYSIS")
 
-    dtf["polarity"] = dtf["text_clean"].progress_apply(lambda x: TextBlob(x).sentiment.polarity) #-1 = negative, +1=positive
-    dtf["subjectivity"] = dtf["text_clean"].progress_apply(lambda x: TextBlob(x).sentiment.subjectivity) #0 = objective, 1=subjective
+    dtf["polarity"] = dtf["text_clean"].apply(lambda x: TextBlob(x).sentiment.polarity) #-1 = negative, +1=positive
+    dtf["subjectivity"] = dtf["text_clean"].apply(lambda x: TextBlob(x).sentiment.subjectivity) #0 = objective, 1=subjective
     dtf.groupby(by="y")[["polarity", "subjectivity"]].mean()
 
     if plot == 2:
@@ -497,6 +497,7 @@ if plot == 1 or plot == 2:
     ax[1].grid(True)
     plt.show()
 
+'''
 ## select observation
 logger.info("INTERPRETATION WITH LIME")
 for i in random.sample(range(1, len(dtf_test)), 10):
@@ -513,7 +514,7 @@ for i in random.sample(range(1, len(dtf_test)), 10):
         explained.show_in_notebook(text=txt_instance, predict_proba=False)
         name_of_html = "lime_" + os.path.basename(__file__) + "_observation_" + str(i) + ".html"
         explained.save_to_file(data_path + "/lime_explanations/" + name_of_html)
-
+'''
 
 '''
 WORD FREQUENCY

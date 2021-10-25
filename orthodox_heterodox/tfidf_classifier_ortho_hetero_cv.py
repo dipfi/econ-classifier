@@ -51,9 +51,9 @@ import numpy as np
 from scipy import stats
 
 ## for plotting
-import matplotlib as mpl
-mpl.use('TkAgg')
 import matplotlib.pyplot as plt
+#import matplotlib as mpl
+#mpl.use('TkAgg')
 import seaborn as sns
 
 ## for processing
@@ -168,11 +168,11 @@ LENGTH ANALYSIS
 
 logger.info("LENGTH ANALYSIS")
 
-dtf['word_count'] = dtf[text_field].progress_apply(lambda x: len(str(x).split(" ")))
+dtf['word_count'] = dtf[text_field].apply(lambda x: len(str(x).split(" ")))
 
-dtf['char_count'] = dtf[text_field].progress_apply(lambda x: sum(len(word) for word in str(x).split(" ")))
+dtf['char_count'] = dtf[text_field].apply(lambda x: sum(len(word) for word in str(x).split(" ")))
 
-dtf['sentence_count'] = dtf[text_field].progress_apply(lambda x: len(str(x).split(".")))
+dtf['sentence_count'] = dtf[text_field].apply(lambda x: len(str(x).split(".")))
 
 dtf['avg_word_length'] = dtf['char_count'] / dtf['word_count']
 
@@ -233,8 +233,8 @@ if sentiment == True:
 
     print("SENTIMENT ANALYSIS")
 
-    dtf["polarity"] = dtf["text_clean"].progress_apply(lambda x: TextBlob(x).sentiment.polarity) #-1 = negative, +1=positive
-    dtf["subjectivity"] = dtf["text_clean"].progress_apply(lambda x: TextBlob(x).sentiment.subjectivity) #0 = objective, 1=subjective
+    dtf["polarity"] = dtf["text_clean"].apply(lambda x: TextBlob(x).sentiment.polarity) #-1 = negative, +1=positive
+    dtf["subjectivity"] = dtf["text_clean"].apply(lambda x: TextBlob(x).sentiment.subjectivity) #0 = objective, 1=subjective
     dtf.groupby(by="y")[["polarity", "subjectivity"]].mean()
 
     if plot == 2:

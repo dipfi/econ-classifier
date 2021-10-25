@@ -16,9 +16,9 @@ def config():
     config = configparser.ConfigParser()
     config.read(os.getcwd() + '/config.ini')
 
-    data_path = config['PATH']['data_path']
     scripts_path = config['PATH']['scripts_path']
     project_path = config['PATH']['project_path']
+    data_path = config['PATH']['data_path']
 
     sys.path.append(project_path)
     return data_path, scripts_path, project_path
@@ -78,7 +78,7 @@ input_file_name = "WOS_lee_heterodox_und_samequality"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
-sample_size = 10000 #"all"  #input_file_size #10000 #"all"
+sample_size = "all" #"all"  #input_file_size #10000 #"all"
 text_field = "Abstract"  # "title" #"abstract"
 label_field = "labels"
 #remove_last_n = 50 #remove 45 for elsevier copyright
