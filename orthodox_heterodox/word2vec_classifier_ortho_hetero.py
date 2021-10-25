@@ -52,8 +52,8 @@ import numpy as np
 from scipy import stats
 
 ## for plotting
-import matplotlib as mpl
-mpl.use('TkAgg')
+#import matplotlib as mpl
+#mpl.use('TkAgg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -96,7 +96,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_30000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -106,7 +106,7 @@ text_field = "text"
 label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
-plot = 1 #0 = none, 1 = some, 2 = all
+plot = 0 #0 = none, 1 = some, 2 = all
 use_pretrained = True #True if pretrained model should be used ("glove-wiki-gigaword-300d"), False to train embeddings based on vocabulary of input files
 num_epochs_for_embedding = 10 #number of epochs to train the word embeddings
 num_epochs_for_classification= 13 #number of epochs to train the the classifier
@@ -449,14 +449,14 @@ logger.info("TEST CALC FINISHED")
 y_test = dtf_test[label_field].values
 classes = np.unique(y_test)
 
-if plot == 1 or plot == 2:
+if (plot == 0 or plot == 1) or plot == 2:
     ## Plot confusion matrix
     cm = metrics.confusion_matrix(y_test, predicted)
     fig, ax = plt.subplots()
     sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)
     ax.set(xlabel="Pred", ylabel="True", xticklabels=classes, yticklabels=classes, title="Confusion matrix")
     plt.yticks(rotation=0)
-    plt.show()
+    plt.savefig("word2vec_ortho_hetero.png", bbox_inches='tight')
 
 toc = time.perf_counter()
 logger.info(f"whole script for {len(dtf)} in {toc-tic} seconds")
