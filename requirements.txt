@@ -57,8 +57,6 @@ murmurhash==1.0.5
 networkx==2.6.2
 nltk==3.6.2
 numpy==1.19.5
-nvidia-cuda-runtime-cu11==2021.10.19
-nvidia-pyindex==1.0.9
 oauthlib==3.1.1
 openpyxl==3.0.7
 opt-einsum==3.3.0

@@ -96,7 +96,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_10000"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -107,9 +107,9 @@ label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
-use_pretrained = True #True if pretrained model should be used ("glove-wiki-gigaword-300d"), False to train embeddings based on vocabulary of input files
-num_epochs_for_embedding = 10 #number of epochs to train the word embeddings
-num_epochs_for_classification= 13 #number of epochs to train the the classifier
+use_pretrained = False #True if pretrained model should be used ("glove-wiki-gigaword-300d"), False to train embeddings based on vocabulary of input files
+num_epochs_for_embedding = 5 #number of epochs to train the word embeddings
+num_epochs_for_classification= 5 #number of epochs to train the the classifier
 ############################################
 
 
@@ -248,7 +248,7 @@ else:
 
     nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=300, window=8, min_count=3, sg=1, epochs=num_epochs_for_embedding)
 
-
+    word = "bad"
     nlp.wv[word].shape
     nlp.wv.most_similar(word)
 

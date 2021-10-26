@@ -44,7 +44,7 @@ pd.set_option('display.max_columns', None)
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 cores = mp.cpu_count()  #2
-output_file_name = "journal_list_sociology_test"
+output_file_name = "journal_list"
 
 
 '''
@@ -59,14 +59,14 @@ target_addresses = ['/cluster/work/lawecon/Data/jstor_econ/raw',
                     '/cluster/work/lawecon/Work/JSTOR_metadata/management',
                     '/cluster/work/lawecon/Work/JSTOR_metadata/history']
 '''
-
+'''
 target_addresses = ["C:/Users/damdu/kDrive/Master/Masterarbeit/Ash/dev/data/jstor_sociology_small",
                     "C:/Users/damdu/kDrive/Master/Masterarbeit/Ash/dev/data/jstor_sociology_small"]
 '''
 target_addresses = ['/cluster/work/lawecon/Data/jstor_econ/raw',
                     '/cluster/work/lawecon/Work/dcai/journal_articles/data/jstor/jstor_sociology',
                     '/cluster/work/lawecon/Work/JSTOR_metadata/political_science']
-'''
+
 
 ############################################
 
