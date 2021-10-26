@@ -96,7 +96,11 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
+<<<<<<< HEAD
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_10000"
+=======
 input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
+>>>>>>> 0e39fad4a7790d7ec8ed82a15d49f9f181427900
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -107,6 +111,11 @@ label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
+<<<<<<< HEAD
+use_pretrained = False #True if pretrained model should be used ("glove-wiki-gigaword-300d"), False to train embeddings based on vocabulary of input files
+num_epochs_for_embedding = 5 #number of epochs to train the word embeddings
+num_epochs_for_classification= 5 #number of epochs to train the the classifier
+=======
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
 which_embeddings = "word2vec_veclen_50_epochs_30_numabstracts_896" #specify model to use here
@@ -115,6 +124,7 @@ num_epochs_for_embedding = 30 #number of epochs to train the word embeddings
 num_epochs_for_classification= 1 #number of epochs to train the the classifier
 embedding_vector_length = 50
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
+>>>>>>> 0e39fad4a7790d7ec8ed82a15d49f9f181427900
 ############################################
 
 parameters = """
@@ -310,8 +320,11 @@ if train_new:
 
     nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=embedding_vector_length, window=8, min_count=3, sg=1, epochs=num_epochs_for_embedding)
 
+<<<<<<< HEAD
+=======
     nlp.save(str(data_path) + "/word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_epochs_" + str(num_epochs_for_embedding))
 
+>>>>>>> 0e39fad4a7790d7ec8ed82a15d49f9f181427900
     word = "bad"
     nlp.wv[word].shape
     nlp.wv.most_similar(word)
