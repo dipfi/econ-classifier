@@ -111,7 +111,7 @@ use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embeddi
 use_embeddings = False #if True a trained model needs to be selected below
 which_embeddings = "word2vec_veclen_50_epochs_30_numabstracts_896" #specify model to use here
 train_new = True #if True new embeddings are trained
-num_epochs_for_embedding = 30 #number of epochs to train the word embeddings
+num_epochs_for_embedding = 15 #number of epochs to train the word embeddings
 num_epochs_for_classification= 1 #number of epochs to train the the classifier
 embedding_vector_length = 50
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
@@ -277,7 +277,7 @@ if use_gigaword:
 
     gigaword_end = time.perf_counter()
     gigaword_time = gigaword_end - gigaword_start
-    logger.info(f"loading gigaword vectors in {pretrained_time} seconds")
+    logger.info(f"loading gigaword vectors in {gigaword_time} seconds")
 
 if use_embeddings:
     load_embeddings_start = time.perf_counter()

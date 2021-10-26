@@ -141,8 +141,6 @@ embedding_vector_length = 50
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
 """
 
-for
-
 def monitor_process():
     ##monitor progress if run on local machine
     if not project_path[0] == "/":
