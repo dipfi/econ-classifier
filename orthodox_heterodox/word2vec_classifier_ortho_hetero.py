@@ -96,7 +96,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -107,10 +107,40 @@ label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
-use_pretrained = True #True if pretrained model should be used ("glove-wiki-gigaword-300d"), False to train embeddings based on vocabulary of input files
-num_epochs_for_embedding = 10 #number of epochs to train the word embeddings
-num_epochs_for_classification= 13 #number of epochs to train the the classifier
+use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
+use_embeddings = False #if True a trained model needs to be selected below
+which_embeddings = "word2vec_veclen_50_epochs_30_numabstracts_896" #specify model to use here
+train_new = True #if True new embeddings are trained
+num_epochs_for_embedding = 30 #number of epochs to train the word embeddings
+num_epochs_for_classification= 1 #number of epochs to train the the classifier
+embedding_vector_length = 50
+max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
 ############################################
+
+parameters = """
+logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
+print_charts_tables = True  # False #True
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
+input_file_size = "all" #10000 #"all"
+input_file_type = "csv"
+output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
+sample_size = "all"  #input_file_size #10000 #"all"
+text_field_clean = "text_clean"  # "title" #"abstract"
+text_field = "text"
+label_field = "y"
+cores = mp.cpu_count()  #mp.cpu_count()  #2
+save = False  # False #True
+plot = 0 #0 = none, 1 = some, 2 = all
+use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
+use_embeddings = False #if True a trained model needs to be selected below
+which_embeddings = "word2vec_veclen_50_epochs_30_numabstracts_896" #specify model to use here
+train_new = True #if True new embeddings are trained
+num_epochs_for_embedding = 30 #number of epochs to train the word embeddings
+num_epochs_for_classification= 1 #number of epochs to train the the classifier
+embedding_vector_length = 50
+max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
+"""
+
 
 
 def monitor_process():
@@ -143,8 +173,9 @@ logging.basicConfig(level=logging_level,
 
 logger = logging.getLogger()
 
-from Utils import utils_ortho_hetero as fcts
+logger.info(parameters)
 
+from Utils import utils_ortho_hetero as fcts
 
 '''
 LOAD DATA
@@ -195,7 +226,6 @@ if plot == 1 or plot == 2:
 
 
 
-
 #FEATURE ENGINEERING
 
 logger.info("FEATURE ENGINEERING")
@@ -226,10 +256,16 @@ trigrams_detector = gensim.models.phrases.Phraser(trigrams_detector)
 
 logger.info("STARTING WORD EMBEDDING")
 ## fit w2v
-if use_pretrained:
-    pretrained_start = time.perf_counter()
+if use_gigaword:
+    gigaword_start = time.perf_counter()
 
-    nlp = gensim_api.load("glove-wiki-gigaword-300")
+    modelname_raw = "glove-wiki-gigaword-" + str(embedding_vector_length)
+
+    modelname = "glove-wiki-gigaword-" + str(embedding_vector_length) + "_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding)
+
+    pretrained_vectors = modelname_raw
+
+    nlp = gensim_api.load(pretrained_vectors)
 
     word = "bad"
     nlp[word].shape
@@ -239,16 +275,44 @@ if use_pretrained:
     tot_words = [word] + [tupla[0] for tupla in nlp.most_similar(word, topn=20)]
     X = nlp[tot_words]
 
-    pretrained_end = time.perf_counter()
-    pretrained_time = pretrained_end - pretrained_start
-    logger.info(f"loading pretrained vectors in {pretrained_time} seconds")
+    gigaword_end = time.perf_counter()
+    gigaword_time = gigaword_end - gigaword_start
+    logger.info(f"loading gigaword vectors in {pretrained_time} seconds")
 
-else:
+if use_embeddings:
+    load_embeddings_start = time.perf_counter()
+
+    modelname = str(which_embeddings)
+
+    pretrained_vectors = str(data_path) + "/" + modelname
+
+    nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
+
+    word = "bad"
+    nlp.wv[word].shape
+    nlp.wv.most_similar(word)
+
+    ## word embedding
+    tot_words = [word] + [tupla[0] for tupla in nlp.wv.most_similar(word, topn=20)]
+    X = nlp.wv[tot_words]
+
+    load_embeddings_end = time.perf_counter()
+    load_embeddings_time = load_embeddings_end - load_embeddings_start
+    logger.info(f"loading embeddings in {load_embeddings_time} seconds")
+
+
+if train_new:
     train_embeddings_start = time.perf_counter()
 
-    nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=300, window=8, min_count=3, sg=1, epochs=num_epochs_for_embedding)
+    modelname_raw = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding)
 
+    modelname = "newembedding" + str(modelname_raw)
 
+    nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=embedding_vector_length, window=8, min_count=3, sg=1, epochs=num_epochs_for_embedding)
+
+    nlp.save(str(data_path) + "/word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_epochs_" + str(num_epochs_for_embedding))
+
+    word = "bad"
     nlp.wv[word].shape
     nlp.wv.most_similar(word)
 
@@ -258,7 +322,7 @@ else:
 
     train_embeddings_end = time.perf_counter()
     train_embeddings_time = train_embeddings_end - train_embeddings_start
-    logger.info(f"loading pretrained vectors {len(dtf)} documents and {num_epochs_for_embedding} epochs in {train_embeddings_time} seconds")
+    logger.info(f"training word2vec for {len(dtf)} documents and {num_epochs_for_embedding} epochs in {train_embeddings_time} seconds")
 
 logger.info("WORD EMBEDDING FINISHED")
 
@@ -299,10 +363,9 @@ dic_vocabulary = tokenizer.word_index
 lst_text2seq = tokenizer.texts_to_sequences(lst_corpus)
 
 ## padding sequence
-maxlength = 100 #np.max([len(i.split()) for i in X_train_series])
-logger.info(f"maxlength = {maxlength}")
+logger.info(f"max_length_of_document_vector = {max_length_of_document_vector}")
 
-X_train = kprocessing.sequence.pad_sequences(lst_text2seq,maxlen=maxlength, padding="post", truncating="post")
+X_train = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector, padding="post", truncating="post")
 
 i = 0
 
@@ -340,13 +403,13 @@ lst_corpus = list(trigrams_detector[lst_corpus])
 lst_text2seq = tokenizer.texts_to_sequences(lst_corpus)
 
 ## padding sequence
-X_test = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=maxlength, padding="post", truncating="post")
+X_test = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector, padding="post", truncating="post")
 
 
 logger.info("SET UP EMBEDDING MATRIX")
 
 ## start the matrix (length of vocabulary x vector size) with all 0s
-embeddings = np.zeros((len(dic_vocabulary)+1, 300))
+embeddings = np.zeros((len(dic_vocabulary)+1, embedding_vector_length))
 
 for word,idx in dic_vocabulary.items():
     ## update the row with vector
@@ -368,20 +431,20 @@ def attention_layer(inputs, neurons):
     return x
 
 ## input
-x_in = layers.Input(shape=(maxlength,))
+x_in = layers.Input(shape=(max_length_of_document_vector,))
 
 ## embedding
 x = layers.Embedding(input_dim=embeddings.shape[0],
                      output_dim=embeddings.shape[1],
                      weights=[embeddings],
-                     input_length=maxlength, trainable=False)(x_in)
+                     input_length=max_length_of_document_vector, trainable=False)(x_in)
 
 ## apply attention
-x = attention_layer(x, neurons=maxlength)
+x = attention_layer(x, neurons=max_length_of_document_vector)
 
 ## 2 layers of bidirectional lstm
-x = layers.Bidirectional(layers.LSTM(units=maxlength, dropout=0.2, return_sequences=True))(x)
-x = layers.Bidirectional(layers.LSTM(units=maxlength, dropout=0.2))(x)
+x = layers.Bidirectional(layers.LSTM(units=max_length_of_document_vector, dropout=0.2, return_sequences=True))(x)
+x = layers.Bidirectional(layers.LSTM(units=max_length_of_document_vector, dropout=0.2))(x)
 
 ## final dense layers
 x = layers.Dense(64, activation='relu')(x)
@@ -394,8 +457,18 @@ model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=
 if print_charts_tables:
     model.summary()
 
-
 logger.info("ENCODING FEATURES")
+
+random_test_labels = False
+
+if random_test_labels:
+
+    newvec = []
+    uniquelabels = np.unique(y_train)
+    for i in range(len(y_train)):
+        newvec.append(random.choice(uniquelabels))
+
+    y_train = pd.DataFrame({"y": newvec})
 
 ## encode y
 dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
@@ -449,14 +522,17 @@ logger.info("TEST CALC FINISHED")
 y_test = dtf_test[label_field].values
 classes = np.unique(y_test)
 
+cm = metrics.confusion_matrix(y_test, predicted)
+cm_path = data_path + "/w2v_cm_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
+np.savetxt(cm_path, cm, delimiter=",", fmt='%1.0f')
+
 if (plot == 0 or plot == 1) or plot == 2:
     ## Plot confusion matrix
-    cm = metrics.confusion_matrix(y_test, predicted)
     fig, ax = plt.subplots()
     sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)
     ax.set(xlabel="Pred", ylabel="True", xticklabels=classes, yticklabels=classes, title="Confusion matrix")
     plt.yticks(rotation=0)
-    plt.savefig("word2vec_ortho_hetero.png", bbox_inches='tight')
+    plt.savefig(data_path +"/word2vec_ortho_hetero.png", bbox_inches='tight')
 
 toc = time.perf_counter()
 logger.info(f"whole script for {len(dtf)} in {toc-tic} seconds")
