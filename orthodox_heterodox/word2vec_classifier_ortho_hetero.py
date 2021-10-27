@@ -108,21 +108,22 @@ cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
-use_embeddings = False #if True a trained model needs to be selected below
-which_embeddings = "word2vec_numabstracts_79431_embeddinglength_300_epochs_30" #specify model to use here
-train_new = True #if True new embeddings are trained
-num_epochs_for_embedding_list = [28,32] #number of epochs to train the word embeddings
+use_embeddings = True #if True a trained model needs to be selected below
+#which_embeddings = "word2vec_numabstracts_79431_embeddinglength_300_epochs_30" #specify model to use here
+embedding_folder = "embeddings_cluster_20211028"
+train_new = False #if True new embeddings are trained
+num_epochs_for_embedding_list = [5,7,9,12,15,20,30] #number of epochs to train the word embeddings
 num_epochs_for_classification_list= [15] #number of epochs to train the the classifier
-embedding_vector_length_list = [150]
+embedding_vector_length_list = [150,200,250,300]
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
-embedding_only = True
+embedding_only = False
 ############################################
 
 parameters = """PARAMETERS:
 input_file_name = """ + input_file_name + """
 use_gigaword = """ + str(use_gigaword) + """
 use_embeddings = """ + str(cores) + """
-which_embeddings = """ + str(which_embeddings) + """
+embedding_folder = """ + str(embedding_folder) + """
 train_new = """ + str(train_new) + """
 num_epochs_for_embedding_list = """ + str(num_epochs_for_embedding_list) + """
 num_epochs_for_classification_list = """ + str(num_epochs_for_classification_list) + """
@@ -226,6 +227,12 @@ if plot == 1 or plot == 2:
 for num_epochs_for_embedding in num_epochs_for_embedding_list:
     for embedding_vector_length in embedding_vector_length_list:
 
+        loop_params = """LOOP PARAMETERS:
+        num_epochs_for_embedding = """ + str(num_epochs_for_embedding) + """
+        embedding_vector_length = """ + str(embedding_vector_length)
+
+        logger.info(loop_params)
+
         #FEATURE ENGINEERING
 
         logger.info("FEATURE ENGINEERING")
@@ -283,9 +290,9 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
         if use_embeddings:
             load_embeddings_start = time.perf_counter()
 
-            modelname = str(which_embeddings)
+            modelname = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_epochs_" + str(num_epochs_for_embedding)
 
-            pretrained_vectors = str(data_path) + "/" + modelname
+            pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
 
             nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
 
@@ -311,7 +318,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
 
             nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=embedding_vector_length, window=8, min_count=2, sg=1, epochs=num_epochs_for_embedding)
 
-            nlp.save(str(data_path) + "/word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_epochs_" + str(num_epochs_for_embedding))
+            nlp.save(str(data_path) + "/" + embedding_folder + "/" + modelname_raw)
 
             word = "bad"
             nlp.wv[word].shape
