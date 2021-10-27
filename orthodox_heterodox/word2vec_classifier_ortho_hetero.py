@@ -108,13 +108,14 @@ cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
-use_embeddings = True #if True a trained model needs to be selected below
+use_embeddings = False #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabstracts_79431_embeddinglength_300_epochs_30" #specify model to use here
-embedding_folder = "embeddings_cluster_20211028"
-train_new = False #if True new embeddings are trained
-num_epochs_for_embedding_list = [5,7,9,12,15,20,30] #number of epochs to train the word embeddings
+embedding_folder = "embeddings"
+train_new = True #if True new embeddings are trained
+num_epochs_for_embedding_list = [10] #number of epochs to train the word embeddings
 num_epochs_for_classification_list= [15] #number of epochs to train the the classifier
-embedding_vector_length_list = [150,200,250,300]
+embedding_vector_length_list = [300]
+window_size_list = [4,6,8,10]
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
 embedding_only = False
 ############################################
@@ -128,6 +129,7 @@ train_new = """ + str(train_new) + """
 num_epochs_for_embedding_list = """ + str(num_epochs_for_embedding_list) + """
 num_epochs_for_classification_list = """ + str(num_epochs_for_classification_list) + """
 embedding_vector_length_list = """ + str(embedding_vector_length_list) + """
+window_size_list = """ + str(window_size_list) + """
 max_length_of_document_vector = """ + str(max_length_of_document_vector) + """
 embedding_only = """ + str(embedding_only)
 
@@ -226,364 +228,368 @@ if plot == 1 or plot == 2:
 
 for num_epochs_for_embedding in num_epochs_for_embedding_list:
     for embedding_vector_length in embedding_vector_length_list:
+        for window_size in window_size_list:
 
-        loop_params = """LOOP PARAMETERS:
-        num_epochs_for_embedding = """ + str(num_epochs_for_embedding) + """
-        embedding_vector_length = """ + str(embedding_vector_length)
+            loop_params = """LOOP PARAMETERS:
+            num_epochs_for_embedding = """ + str(num_epochs_for_embedding) + """
+            embedding_vector_length = """ + str(embedding_vector_length) + """
+            window_size = """ + str(window_size)
 
-        logger.info(loop_params)
+            logger.info(loop_params)
 
-        #FEATURE ENGINEERING
+            #FEATURE ENGINEERING
 
-        logger.info("FEATURE ENGINEERING")
+            logger.info("FEATURE ENGINEERING")
 
-        #pretrained = gensim.downloader.load("glove-wiki-gigaword-300")
-
-
-
-        logger.info("FEATURE ENGINEERING FOR TRAINING SET")
-
-        corpus = X_train_series
-
-
-        ## create list of lists of unigrams
-        lst_corpus = []
-        for string in corpus:
-           lst_words = string.split()
-           lst_grams = [' '.join(lst_words[i:i+1]) for i in range(0, len(lst_words), 1)]
-           lst_corpus.append(lst_grams)
-
-
-        ## detect bigrams and trigrams
-        bigrams_detector = gensim.models.phrases.Phrases(lst_corpus, delimiter=' ', min_count=5, threshold=10)
-        bigrams_detector = gensim.models.phrases.Phraser(bigrams_detector)
-        trigrams_detector = gensim.models.phrases.Phrases(bigrams_detector[lst_corpus], delimiter=" ", min_count=2, threshold=10)
-        trigrams_detector = gensim.models.phrases.Phraser(trigrams_detector)
-
-
-        logger.info("STARTING WORD EMBEDDING")
-
-        ## fit w2v
-        if use_gigaword:
-            gigaword_start = time.perf_counter()
-
-            modelname_raw = "glove-wiki-gigaword-" + str(embedding_vector_length)
-
-            modelname = "glove-wiki-gigaword-" + str(embedding_vector_length) + "_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding)
-
-            pretrained_vectors = modelname_raw
-
-            nlp = gensim_api.load(pretrained_vectors)
-
-            word = "bad"
-            nlp[word].shape
-            nlp.most_similar(word)
-
-            ## word embedding
-            tot_words = [word] + [tupla[0] for tupla in nlp.most_similar(word, topn=20)]
-            X = nlp[tot_words]
-
-            gigaword_end = time.perf_counter()
-            gigaword_time = gigaword_end - gigaword_start
-            logger.info(f"loading gigaword vectors in {gigaword_time} seconds")
-
-        if use_embeddings:
-            load_embeddings_start = time.perf_counter()
-
-            modelname = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_epochs_" + str(num_epochs_for_embedding)
-
-            pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
-
-            nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
-
-            word = "bad"
-            logger.info(str(nlp.wv[word].shape))
-            logger.info(word + ": " + str(nlp.wv.most_similar(word)))
-
-            ## word embedding
-            tot_words = [word] + [tupla[0] for tupla in nlp.wv.most_similar(word, topn=20)]
-            X = nlp.wv[tot_words]
-
-            load_embeddings_end = time.perf_counter()
-            load_embeddings_time = load_embeddings_end - load_embeddings_start
-            logger.info(f"loading embeddings in {load_embeddings_time} seconds")
-
-
-        if train_new:
-            train_embeddings_start = time.perf_counter()
-
-            modelname_raw = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding)
-
-            modelname = "newembedding" + str(modelname_raw)
-
-            nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=embedding_vector_length, window=8, min_count=2, sg=1, epochs=num_epochs_for_embedding)
-
-            nlp.save(str(data_path) + "/" + embedding_folder + "/" + modelname_raw)
-
-            word = "bad"
-            nlp.wv[word].shape
-            nlp.wv.most_similar(word)
-
-            ## word embedding
-            tot_words = [word] + [tupla[0] for tupla in nlp.wv.most_similar(word, topn=20)]
-            X = nlp.wv[tot_words]
-
-            train_embeddings_end = time.perf_counter()
-            train_embeddings_time = train_embeddings_end - train_embeddings_start
-            logger.info(f"training word2vec for {len(dtf)} documents and {num_epochs_for_embedding} epochs in {train_embeddings_time} seconds")
-
-        logger.info("WORD EMBEDDING FINISHED")
+            #pretrained = gensim.downloader.load("glove-wiki-gigaword-300")
 
 
 
+            logger.info("FEATURE ENGINEERING FOR TRAINING SET")
+
+            corpus = X_train_series
 
 
-
-        if embedding_only == False:
-
-            ## pca to reduce dimensionality from 300 to 3
-            pca = manifold.TSNE(perplexity=40, n_components=3, init='pca')
-            X = pca.fit_transform(X)
-
-            ## create dtf
-            dtf_ = pd.DataFrame(X, index=tot_words, columns=["x","y","z"])
-            dtf_["input"] = 0
-            dtf_["input"].iloc[0:1] = 1
-
-            if plot == 2:
-                ## plot 3d
-                from mpl_toolkits.mplot3d import Axes3D
-                ax = fig.add_subplot(111, projection='3d')
-                ax.scatter(dtf_[dtf_["input"]==0]['x'],
-                           dtf_[dtf_["input"]==0]['y'],
-                           dtf_[dtf_["input"]==0]['z'], c="black")
-                ax.scatter(dtf_[dtf_["input"]==1]['x'],
-                           dtf_[dtf_["input"]==1]['y'],
-                           dtf_[dtf_["input"]==1]['z'], c="red")
-                ax.set(xlabel=None, ylabel=None, zlabel=None, xticklabels=[],
-                       yticklabels=[], zticklabels=[])
-                for label, row in dtf_[["x","y","z"]].iterrows():
-                    x, y, z = row
-                    ax.text(x, y, z, s=label)
-
-
-            ## tokenize text
-            tokenizer = kprocessing.text.Tokenizer(lower=True, split=' ', oov_token="NaN", filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
-            tokenizer.fit_on_texts(lst_corpus)
-            dic_vocabulary = tokenizer.word_index
-
-            ## create sequence
-            lst_text2seq = tokenizer.texts_to_sequences(lst_corpus)
-
-            ## padding sequence
-            logger.info(f"max_length_of_document_vector = {max_length_of_document_vector}")
-
-            X_train = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector, padding="post", truncating="post")
-
-            i = 0
-
-            ## list of text: ["I like this", ...]
-            len_txt = len(X_train_series.iloc[i].split())
-            if print_charts_tables:
-                logger.info(f"from: {X_train_series.iloc[i]} |len: {len_txt}")
-
-            ## sequence of token ids: [[1, 2, 3], ...]
-            len_tokens = len(X_train[i])
-            if print_charts_tables:
-                logger.info(f"to: {X_train[i]} | len: {len(X_train[i])}")
-
-            ## vocabulary: {"I":1, "like":2, "this":3, ...}
-            if print_charts_tables:
-                logger.info(f"check: {X_train_series.iloc[i].split()[0]}  -- idx in vocabulary --> {dic_vocabulary[X_train_series.iloc[i].split()[0]]}")
-
-            logger.info("FEATURE ENGINEERING FOR TEST SET")
-
-            corpus = dtf_test["text_clean"]
-
-
-            ## create list of n-grams
+            ## create list of lists of unigrams
             lst_corpus = []
             for string in corpus:
-                lst_words = string.split()
-                lst_grams = [" ".join(lst_words[i:i+1]) for i in range(0, len(lst_words), 1)]
-                lst_corpus.append(lst_grams)
-
-            ## detect common bigrams and trigrams using the fitted detectors
-            lst_corpus = list(bigrams_detector[lst_corpus])
-            lst_corpus = list(trigrams_detector[lst_corpus])
-
-            ## text to sequence with the fitted tokenizer
-            lst_text2seq = tokenizer.texts_to_sequences(lst_corpus)
-
-            ## padding sequence
-            X_test = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector, padding="post", truncating="post")
+               lst_words = string.split()
+               lst_grams = [' '.join(lst_words[i:i+1]) for i in range(0, len(lst_words), 1)]
+               lst_corpus.append(lst_grams)
 
 
-            logger.info("SET UP EMBEDDING MATRIX")
+            ## detect bigrams and trigrams
+            bigrams_detector = gensim.models.phrases.Phrases(lst_corpus, delimiter=' ', min_count=5, threshold=10)
+            bigrams_detector = gensim.models.phrases.Phraser(bigrams_detector)
+            trigrams_detector = gensim.models.phrases.Phrases(bigrams_detector[lst_corpus], delimiter=" ", min_count=2, threshold=10)
+            trigrams_detector = gensim.models.phrases.Phraser(trigrams_detector)
 
-            ## start the matrix (length of vocabulary x vector size) with all 0s
-            embeddings = np.zeros((len(dic_vocabulary)+1, embedding_vector_length))
 
+            logger.info("STARTING WORD EMBEDDING")
+
+            ## fit w2v
             if use_gigaword:
-                for word, idx in dic_vocabulary.items():
-                    ## update the row with vector
-                    try:
-                        embeddings[idx] = nlp[word]
-                    ## if word not in model then skip and the row stays all 0s
-                    except:
-                        pass
+                gigaword_start = time.perf_counter()
 
-            else:
-                for word, idx in dic_vocabulary.items():
-                    ## update the row with vector
-                    try:
-                        embeddings[idx] = nlp.wv[word]
-                    ## if word not in model then skip and the row stays all 0s
-                    except:
-                        pass
+                modelname_raw = "glove-wiki-gigaword-" + str(embedding_vector_length)
+
+                modelname = "glove-wiki-gigaword-" + str(embedding_vector_length) + "_numabstracts_" + str(len(dtf))
+
+                pretrained_vectors = modelname_raw
+
+                nlp = gensim_api.load(pretrained_vectors)
+
+                word = "bad"
+                nlp[word].shape
+                nlp.most_similar(word)
+
+                ## word embedding
+                tot_words = [word] + [tupla[0] for tupla in nlp.most_similar(word, topn=20)]
+                X = nlp[tot_words]
+
+                gigaword_end = time.perf_counter()
+                gigaword_time = gigaword_end - gigaword_start
+                logger.info(f"loading gigaword vectors in {gigaword_time} seconds")
+
+            if use_embeddings:
+                load_embeddings_start = time.perf_counter()
+
+                modelname = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_epochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size)
+
+                pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
+
+                nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
+
+                word = "bad"
+                logger.info(str(nlp.wv[word].shape))
+                logger.info(word + ": " + str(nlp.wv.most_similar(word)))
+
+                ## word embedding
+                tot_words = [word] + [tupla[0] for tupla in nlp.wv.most_similar(word, topn=20)]
+                X = nlp.wv[tot_words]
+
+                load_embeddings_end = time.perf_counter()
+                load_embeddings_time = load_embeddings_end - load_embeddings_start
+                logger.info(f"loading embeddings in {load_embeddings_time} seconds")
 
 
-            logger.info("NETWORK ARCHITECTURE")
+            if train_new:
+                train_embeddings_start = time.perf_counter()
 
-            ## code attention layer
-            def attention_layer(inputs, neurons):
-                x = layers.Permute((2,1))(inputs)
-                x = layers.Dense(neurons, activation="softmax")(x)
-                x = layers.Permute((2,1), name="attention")(x)
-                x = layers.multiply([inputs, x])
-                return x
+                modelname_raw = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size)
 
-            ## input
-            x_in = layers.Input(shape=(max_length_of_document_vector,))
+                modelname = "newembedding" + str(modelname_raw)
 
-            ## embedding
-            x = layers.Embedding(input_dim=embeddings.shape[0],
-                                 output_dim=embeddings.shape[1],
-                                 weights=[embeddings],
-                                 input_length=max_length_of_document_vector, trainable=False)(x_in)
+                nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=embedding_vector_length, window=window_size, sg=1, epochs=num_epochs_for_embedding, workers = cores)
 
-            ## apply attention
-            x = attention_layer(x, neurons=max_length_of_document_vector)
+                nlp.save(str(data_path) + "/" + embedding_folder + "/" + modelname_raw)
 
-            ## 2 layers of bidirectional lstm
-            x = layers.Bidirectional(layers.LSTM(units=max_length_of_document_vector, dropout=0.2, return_sequences=True))(x)
-            x = layers.Bidirectional(layers.LSTM(units=max_length_of_document_vector, dropout=0.2))(x)
+                word = "bad"
+                nlp.wv[word].shape
+                nlp.wv.most_similar(word)
 
-            ## final dense layers
-            x = layers.Dense(64, activation='relu')(x)
-            y_out = layers.Dense(2, activation='softmax')(x)
+                ## word embedding
+                tot_words = [word] + [tupla[0] for tupla in nlp.wv.most_similar(word, topn=20)]
+                X = nlp.wv[tot_words]
 
-            ## compile
-            model = models.Model(x_in, y_out)
-            model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+                train_embeddings_end = time.perf_counter()
+                train_embeddings_time = train_embeddings_end - train_embeddings_start
+                logger.info(f"training word2vec for {len(dtf)} documents and {num_epochs_for_embedding} epochs in {train_embeddings_time} seconds")
 
-            if print_charts_tables:
-                model.summary()
-
-            logger.info("ENCODING FEATURES")
-
-            random_test_labels = False
-
-            if random_test_labels:
-
-                newvec = []
-                uniquelabels = np.unique(y_train)
-                for i in range(len(y_train)):
-                    newvec.append(random.choice(uniquelabels))
-
-                y_train = pd.DataFrame({"y": newvec})
-
-            ## encode y
-            dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
-            inverse_dic = {v:k for k,v in dic_y_mapping.items()}
-            y_train_bin = np.array([inverse_dic[y] for y in y_train['y']])
+            logger.info("WORD EMBEDDING FINISHED")
 
 
 
 
 
 
-            for num_epochs_for_classification in num_epochs_for_classification_list:
+            if embedding_only == False:
 
-                logger.info("TRAINING")
+                ## pca to reduce dimensionality from 300 to 3
+                pca = manifold.TSNE(perplexity=40, n_components=3, init='pca')
+                X = pca.fit_transform(X)
 
-                logger.info("EPOCHS: " + str(num_epochs_for_classification))
+                ## create dtf
+                dtf_ = pd.DataFrame(X, index=tot_words, columns=["x","y","z"])
+                dtf_["input"] = 0
+                dtf_["input"].iloc[0:1] = 1
 
-                logger.info("STARTING TRAINING")
-                ## train
-                train_start = time.perf_counter()
-                training = model.fit(x=X_train, y=y_train_bin, batch_size=256, epochs=num_epochs_for_classification, shuffle=True, verbose=0, validation_split=0.3)
-                train_end = time.perf_counter()
-                train_time = train_end-train_start
-                logger.info(f"training model for {len(dtf)} and {num_epochs_for_classification} epochs in {train_time} seconds")
-
-
-                ## plot loss and accuracy
-                metrics_plot = [k for k in training.history.keys() if ("loss" not in k) and ("val" not in k)]
-
-
-                if plot == 0 or plot == 1 or plot == 2:
-                    fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True)
-
-                    ax[0].set(title="Training")
-                    ax11 = ax[0].twinx()
-                    ax[0].plot(training.history['loss'], color='black')
-                    ax[0].set_xlabel('Epochs')
-                    ax[0].set_ylabel('Loss', color='black')
-
-                    for metric in metrics_plot:
-                        ax11.plot(training.history[metric], label=metric)
-                    ax11.set_ylabel("Score", color='steelblue')
-                    ax11.legend()
-
-                    ax[1].set(title="Validation")
-                    ax22 = ax[1].twinx()
-                    ax[1].plot(training.history['val_loss'], color='black')
-                    ax[1].set_xlabel('Epochs')
-                    ax[1].set_ylabel('Loss', color='black')
-                    for metric in metrics_plot:
-                         ax22.plot(training.history['val_'+metric], label=metric)
-                    ax22.set_ylabel("Score", color="steelblue")
-
-                    training_plot_path = data_path + "/results/w2v_training_plot_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".png"
-
-                    plt.savefig(training_plot_path, bbox_inches='tight')
+                if plot == 2:
+                    ## plot 3d
+                    from mpl_toolkits.mplot3d import Axes3D
+                    ax = fig.add_subplot(111, projection='3d')
+                    ax.scatter(dtf_[dtf_["input"]==0]['x'],
+                               dtf_[dtf_["input"]==0]['y'],
+                               dtf_[dtf_["input"]==0]['z'], c="black")
+                    ax.scatter(dtf_[dtf_["input"]==1]['x'],
+                               dtf_[dtf_["input"]==1]['y'],
+                               dtf_[dtf_["input"]==1]['z'], c="red")
+                    ax.set(xlabel=None, ylabel=None, zlabel=None, xticklabels=[],
+                           yticklabels=[], zticklabels=[])
+                    for label, row in dtf_[["x","y","z"]].iterrows():
+                        x, y, z = row
+                        ax.text(x, y, z, s=label)
 
 
-                ## test
-                logger.info("TEST CALC")
-                predicted_prob = model.predict(X_test)
-                predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
-                logger.info("TEST CALC FINISHED")
+                ## tokenize text
+                tokenizer = kprocessing.text.Tokenizer(lower=True, split=' ', oov_token="NaN", filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
+                tokenizer.fit_on_texts(lst_corpus)
+                dic_vocabulary = tokenizer.word_index
+
+                ## create sequence
+                lst_text2seq = tokenizer.texts_to_sequences(lst_corpus)
+
+                ## padding sequence
+                logger.info(f"max_length_of_document_vector = {max_length_of_document_vector}")
+
+                X_train = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector, padding="post", truncating="post")
+
+                i = 0
+
+                ## list of text: ["I like this", ...]
+                len_txt = len(X_train_series.iloc[i].split())
+                if print_charts_tables:
+                    logger.info(f"from: {X_train_series.iloc[i]} |len: {len_txt}")
+
+                ## sequence of token ids: [[1, 2, 3], ...]
+                len_tokens = len(X_train[i])
+                if print_charts_tables:
+                    logger.info(f"to: {X_train[i]} | len: {len(X_train[i])}")
+
+                ## vocabulary: {"I":1, "like":2, "this":3, ...}
+                if print_charts_tables:
+                    logger.info(f"check: {X_train_series.iloc[i].split()[0]}  -- idx in vocabulary --> {dic_vocabulary[X_train_series.iloc[i].split()[0]]}")
+
+                logger.info("FEATURE ENGINEERING FOR TEST SET")
+
+                corpus = dtf_test["text_clean"]
 
 
-                y_test = dtf_test[label_field].values
-                classes = np.unique(y_test)
+                ## create list of n-grams
+                lst_corpus = []
+                for string in corpus:
+                    lst_words = string.split()
+                    lst_grams = [" ".join(lst_words[i:i+1]) for i in range(0, len(lst_words), 1)]
+                    lst_corpus.append(lst_grams)
 
-                cm = metrics.confusion_matrix(y_test, predicted)
-                logger.info("confusion matrix: " + str(cm))
-                cm_path = data_path + "/results/w2v_cm_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
-                np.savetxt(cm_path, cm, delimiter=",", fmt='%1.0f')
+                ## detect common bigrams and trigrams using the fitted detectors
+                lst_corpus = list(bigrams_detector[lst_corpus])
+                lst_corpus = list(trigrams_detector[lst_corpus])
 
-                ## Accuracy, Precision, Recall
-                logger.info("ACCURACY, PRECISION, RECALL")
+                ## text to sequence with the fitted tokenizer
+                lst_text2seq = tokenizer.texts_to_sequences(lst_corpus)
 
-                auc = metrics.roc_auc_score(y_test, predicted_prob[:, 1], multi_class="ovr")
-                report = pd.DataFrame(metrics.classification_report(y_test, predicted,output_dict=True)).transpose()
-                report.loc["auc"] = [auc]*len(report.columns)
-                logger.info("Detail:")
-                logger.info(report)
-                report_path = data_path + "/results/w2v_report_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
+                ## padding sequence
+                X_test = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector, padding="post", truncating="post")
 
-                report.to_csv(report_path)
 
-                if plot == 1 or plot == 2:
-                    ## Plot confusion matrix
-                    fig, ax = plt.subplots()
-                    sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)
-                    ax.set(xlabel="Pred", ylabel="True", xticklabels=classes, yticklabels=classes, title="Confusion matrix")
-                    plt.yticks(rotation=0)
-                    plt.savefig(data_path +"/results/word2vec_ortho_hetero.png", bbox_inches='tight')
+                logger.info("SET UP EMBEDDING MATRIX")
+
+                ## start the matrix (length of vocabulary x vector size) with all 0s
+                embeddings = np.zeros((len(dic_vocabulary)+1, embedding_vector_length))
+
+                if use_gigaword:
+                    for word, idx in dic_vocabulary.items():
+                        ## update the row with vector
+                        try:
+                            embeddings[idx] = nlp[word]
+                        ## if word not in model then skip and the row stays all 0s
+                        except:
+                            pass
+
+                else:
+                    for word, idx in dic_vocabulary.items():
+                        ## update the row with vector
+                        try:
+                            embeddings[idx] = nlp.wv[word]
+                        ## if word not in model then skip and the row stays all 0s
+                        except:
+                            pass
+
+
+                logger.info("NETWORK ARCHITECTURE")
+
+                ## code attention layer
+                def attention_layer(inputs, neurons):
+                    x = layers.Permute((2,1))(inputs)
+                    x = layers.Dense(neurons, activation="softmax")(x)
+                    x = layers.Permute((2,1), name="attention")(x)
+                    x = layers.multiply([inputs, x])
+                    return x
+
+                ## input
+                x_in = layers.Input(shape=(max_length_of_document_vector,))
+
+                ## embedding
+                x = layers.Embedding(input_dim=embeddings.shape[0],
+                                     output_dim=embeddings.shape[1],
+                                     weights=[embeddings],
+                                     input_length=max_length_of_document_vector, trainable=False)(x_in)
+
+                ## apply attention
+                x = attention_layer(x, neurons=max_length_of_document_vector)
+
+                ## 2 layers of bidirectional lstm
+                x = layers.Bidirectional(layers.LSTM(units=max_length_of_document_vector, dropout=0.2, return_sequences=True))(x)
+                x = layers.Bidirectional(layers.LSTM(units=max_length_of_document_vector, dropout=0.2))(x)
+
+                ## final dense layers
+                x = layers.Dense(64, activation='relu')(x)
+                y_out = layers.Dense(2, activation='softmax')(x)
+
+                ## compile
+                model = models.Model(x_in, y_out)
+                model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+                if print_charts_tables:
+                    model.summary()
+
+                logger.info("ENCODING FEATURES")
+
+                random_test_labels = False
+
+                if random_test_labels:
+
+                    newvec = []
+                    uniquelabels = np.unique(y_train)
+                    for i in range(len(y_train)):
+                        newvec.append(random.choice(uniquelabels))
+
+                    y_train = pd.DataFrame({"y": newvec})
+
+                ## encode y
+                dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
+                inverse_dic = {v:k for k,v in dic_y_mapping.items()}
+                y_train_bin = np.array([inverse_dic[y] for y in y_train['y']])
+
+
+
+
+
+
+                for num_epochs_for_classification in num_epochs_for_classification_list:
+
+                    logger.info("TRAINING")
+
+                    logger.info("EPOCHS: " + str(num_epochs_for_classification))
+
+                    logger.info("STARTING TRAINING")
+                    ## train
+                    train_start = time.perf_counter()
+                    training = model.fit(x=X_train, y=y_train_bin, batch_size=256, epochs=num_epochs_for_classification, shuffle=True, verbose=0, validation_split=0.3, workers=cores)
+                    train_end = time.perf_counter()
+                    train_time = train_end-train_start
+                    logger.info(f"training model for {len(dtf)} and {num_epochs_for_classification} epochs in {train_time} seconds")
+
+
+                    ## plot loss and accuracy
+                    metrics_plot = [k for k in training.history.keys() if ("loss" not in k) and ("val" not in k)]
+
+
+                    if plot == 0 or plot == 1 or plot == 2:
+                        fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True)
+
+                        ax[0].set(title="Training")
+                        ax11 = ax[0].twinx()
+                        ax[0].plot(training.history['loss'], color='black')
+                        ax[0].set_xlabel('Epochs')
+                        ax[0].set_ylabel('Loss', color='black')
+
+                        for metric in metrics_plot:
+                            ax11.plot(training.history[metric], label=metric)
+                        ax11.set_ylabel("Score", color='steelblue')
+                        ax11.legend()
+
+                        ax[1].set(title="Validation")
+                        ax22 = ax[1].twinx()
+                        ax[1].plot(training.history['val_loss'], color='black')
+                        ax[1].set_xlabel('Epochs')
+                        ax[1].set_ylabel('Loss', color='black')
+                        for metric in metrics_plot:
+                             ax22.plot(training.history['val_'+metric], label=metric)
+                        ax22.set_ylabel("Score", color="steelblue")
+
+                        training_plot_path = data_path + "/results/w2v_training_plot_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".png"
+
+                        plt.savefig(training_plot_path, bbox_inches='tight')
+
+
+                    ## test
+                    logger.info("TEST CALC")
+                    predicted_prob = model.predict(X_test)
+                    predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
+                    logger.info("TEST CALC FINISHED")
+
+
+                    y_test = dtf_test[label_field].values
+                    classes = np.unique(y_test)
+
+                    cm = metrics.confusion_matrix(y_test, predicted)
+                    logger.info("confusion matrix: " + str(cm))
+                    cm_path = data_path + "/results/w2v_cm_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
+                    np.savetxt(cm_path, cm, delimiter=",", fmt='%1.0f')
+
+                    ## Accuracy, Precision, Recall
+                    logger.info("ACCURACY, PRECISION, RECALL")
+
+                    auc = metrics.roc_auc_score(y_test, predicted_prob[:, 1], multi_class="ovr")
+                    report = pd.DataFrame(metrics.classification_report(y_test, predicted,output_dict=True)).transpose()
+                    report.loc["auc"] = [auc]*len(report.columns)
+                    logger.info("Detail:")
+                    logger.info(report)
+                    report_path = data_path + "/results/w2v_report_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
+
+                    report.to_csv(report_path)
+
+                    if plot == 1 or plot == 2:
+                        ## Plot confusion matrix
+                        fig, ax = plt.subplots()
+                        sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)
+                        ax.set(xlabel="Pred", ylabel="True", xticklabels=classes, yticklabels=classes, title="Confusion matrix")
+                        plt.yticks(rotation=0)
+                        plt.savefig(data_path +"/results/word2vec_ortho_hetero.png", bbox_inches='tight')
+
+
 
 toc = time.perf_counter()
 logger.info(f"whole script for {len(dtf)} in {toc-tic} seconds")
