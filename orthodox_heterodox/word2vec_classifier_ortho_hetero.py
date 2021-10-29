@@ -112,13 +112,15 @@ use_embeddings = False #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabstracts_79431_embeddinglength_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
 train_new = True #if True new embeddings are trained
-num_epochs_for_embedding_list = [1,2] #number of epochs to train the word embeddings
-num_epochs_for_classification_list= [1,2] #number of epochs to train the the classifier
+num_epochs_for_embedding_list = [15] #number of epochs to train the word embeddings
+num_epochs_for_classification_list= [10] #number of epochs to train the the classifier
 embedding_vector_length_list = [300]
-window_size_list = [6]
+window_size_list = [4]
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
 embedding_only = False
-save_results = False
+save_results = True
+test_size = 0.1
+oversampling = False #if "False" --> undersampling
 ############################################
 
 parameters = """PARAMETERS:
@@ -133,8 +135,8 @@ embedding_vector_length_list = """ + str(embedding_vector_length_list) + """
 window_size_list = """ + str(window_size_list) + """
 max_length_of_document_vector = """ + str(max_length_of_document_vector) + """
 embedding_only = """ + str(embedding_only) + """
-save_results = """ + str(save_results)
-
+save_results = """ + str(save_results) + """
+test_size = """ + str(test_size)
 
 
 
@@ -224,20 +226,22 @@ if plot == 1 or plot == 2:
 TRAIN TEST SPLIT
 '''
 logger.info("TRAIN TEST SPLIT")
-dtf_train, dtf_test = model_selection.train_test_split(dtf, test_size=0.3)
+dtf_train, dtf_test = model_selection.train_test_split(dtf, test_size=test_size)
 
 
 
 #balanbce dataset
 logger.info("BALANCE TRAINING SET")
 
-under_sampler = RandomUnderSampler(random_state=42)
-X_train, y_train = under_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean]}), pd.DataFrame({"y":dtf_train[label_field]}))
+if oversampling:
+    over_sampler = RandomOverSampler(random_state=42)
+    X_train, y_train = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean]}), pd.DataFrame({"y":dtf_train[label_field]}))
 
-'''
-over_sampler = RandomOverSampler(random_state=42)
-X_train, y_train = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean]}), pd.DataFrame({"y":dtf_train[label_field]}))
-'''
+else:
+    under_sampler = RandomUnderSampler(random_state=42)
+    X_train, y_train = under_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean]}), pd.DataFrame({"y":dtf_train[label_field]}))
+
+
 
 X_train_series = X_train.squeeze(axis=1)
 y_train_series = y_train.squeeze(axis=1)
@@ -321,7 +325,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
             if use_embeddings:
                 load_embeddings_start = time.perf_counter()
 
-                modelname = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size)
+                modelname = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_oversampling_" + str(oversampling) + "_testsize_" + str(test_size)
 
                 pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
 
@@ -343,7 +347,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
             if train_new:
                 train_embeddings_start = time.perf_counter()
 
-                modelname_raw = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size)
+                modelname_raw = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_oversampling_" + str(oversampling) + "_testsize_" + str(test_size)
 
                 modelname = "newembedding" + str(modelname_raw)
 
@@ -657,7 +661,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                                                                      "AUC-PR": [auc_pr]}))
 
 if save_results:
-    embedding_path = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embeddingepochs_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list)
+    embedding_path = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embeddingepochs_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list) + "_oversampling_" + str(oversampling) + "_testsize_" + str(test_size)
 
     results_path = data_path + "/results/w2v_report_" + str(embedding_path) + "_classificatinepochs_" + '_'.join(str(e) for e in num_epochs_for_classification_list) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
 
