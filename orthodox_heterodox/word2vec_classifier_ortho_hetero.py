@@ -108,14 +108,14 @@ cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
-use_embeddings = False #if True a trained model needs to be selected below
+use_embeddings = True #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabstracts_79431_embeddinglength_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
-train_new = True #if True new embeddings are trained
-num_epochs_for_embedding_list = [10] #number of epochs to train the word embeddings
-num_epochs_for_classification_list= [15] #number of epochs to train the the classifier
+train_new = False #if True new embeddings are trained
+num_epochs_for_embedding_list = [5] #number of epochs to train the word embeddings
+num_epochs_for_classification_list= [1,2,3] #number of epochs to train the the classifier
 embedding_vector_length_list = [300]
-window_size_list = [4,6,8,10]
+window_size_list = [4]
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
 embedding_only = False
 ############################################
@@ -132,6 +132,9 @@ embedding_vector_length_list = """ + str(embedding_vector_length_list) + """
 window_size_list = """ + str(window_size_list) + """
 max_length_of_document_vector = """ + str(max_length_of_document_vector) + """
 embedding_only = """ + str(embedding_only)
+
+
+
 
 
 
@@ -166,6 +169,29 @@ logging.basicConfig(level=logging_level,
 logger = logging.getLogger()
 
 logger.info(parameters)
+
+results_file = pd.DataFrame({"training_length":[],
+                             "use_gigaword":[],
+                             "num_epochs_for_embedding":[],
+                             "num_epochs_for_classification":[],
+                             "embedding_vector_length":[],
+                             "window_size":[],
+                             "max_length_of_document_vector":[],
+                             "Negative_Label":[],
+                             "Positive_Label":[],
+                             "Support_Negative":[],
+                             "Support_Positive":[],
+                             "TN":[],
+                             "FP":[],
+                             "FN":[],
+                             "TP":[],
+                             "Precision_False":[],
+                             "Precision_True":[],
+                             "Recall_False":[],
+                             "Recall_True":[],
+                             "AUC":[],
+                             "AUC-PR":[]})
+
 
 if use_gigaword + use_embeddings + train_new != 1:
     sys.exit("invalid parameter setting: set only of use_gigaword, use_embeddings and which_embeddings to 'True' and the other two to 'False'")
@@ -294,7 +320,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
             if use_embeddings:
                 load_embeddings_start = time.perf_counter()
 
-                modelname = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_epochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size)
+                modelname = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size)
 
                 pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
 
@@ -320,7 +346,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
 
                 modelname = "newembedding" + str(modelname_raw)
 
-                nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=embedding_vector_length, window=window_size, sg=1, epochs=num_epochs_for_embedding, workers = cores)
+                nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=embedding_vector_length, window=window_size, sg=1, epochs=num_epochs_for_embedding, workers = cores, callbacks = None)
 
                 nlp.save(str(data_path) + "/" + embedding_folder + "/" + modelname_raw)
 
@@ -499,6 +525,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
 
                 ## encode y
                 dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
+                dic_y_mapping = {0: "samequality", 1:"heterodox"}
                 inverse_dic = {v:k for k,v in dic_y_mapping.items()}
                 y_train_bin = np.array([inverse_dic[y] for y in y_train['y']])
 
@@ -526,7 +553,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                     metrics_plot = [k for k in training.history.keys() if ("loss" not in k) and ("val" not in k)]
 
 
-                    if plot == 0 or plot == 1 or plot == 2:
+                    if plot == 1 or plot == 2:
                         fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True)
 
                         ax[0].set(title="Training")
@@ -566,20 +593,32 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
 
                     cm = metrics.confusion_matrix(y_test, predicted)
                     logger.info("confusion matrix: " + str(cm))
+
+                    '''
                     cm_path = data_path + "/results/w2v_cm_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
                     np.savetxt(cm_path, cm, delimiter=",", fmt='%1.0f')
+                    '''
+
 
                     ## Accuracy, Precision, Recall
                     logger.info("ACCURACY, PRECISION, RECALL")
 
-                    auc = metrics.roc_auc_score(y_test, predicted_prob[:, 1], multi_class="ovr")
+                    ## encode y
+                    y_test_bin = np.array([inverse_dic[y] for y in y_test])
+
+                    auc = metrics.roc_auc_score(y_test, predicted_prob[:, 1])
+                    precision, recall, threshold = metrics.precision_recall_curve(y_test_bin, predicted_prob[:, 1])
+                    auc_pr = metrics.auc(recall, precision)
                     report = pd.DataFrame(metrics.classification_report(y_test, predicted,output_dict=True)).transpose()
                     report.loc["auc"] = [auc]*len(report.columns)
+                    report.loc["auc_pr"] = [auc_pr] * len(report.columns)
+
                     logger.info("Detail:")
                     logger.info(report)
+                    '''
                     report_path = data_path + "/results/w2v_report_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
-
                     report.to_csv(report_path)
+                    '''
 
                     if plot == 1 or plot == 2:
                         ## Plot confusion matrix
@@ -590,6 +629,32 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                         plt.savefig(data_path +"/results/word2vec_ortho_hetero.png", bbox_inches='tight')
 
 
+                    results_file = results_file.append(pd.DataFrame({"training_length": [len(y_train)],
+                                                                     "use_gigaword": [use_gigaword],
+                                                                     "num_epochs_for_embedding": [num_epochs_for_embedding],
+                                                                     "num_epochs_for_classification": [num_epochs_for_classification],
+                                                                     "embedding_vector_length": [embedding_vector_length],
+                                                                     "window_size": [window_size],
+                                                                     "max_length_of_document_vector": [max_length_of_document_vector],
+                                                                     "Negative_Label": [classes[0]],
+                                                                     "Positive_Label": [classes[1]],
+                                                                     "Support_Negative": [report["support"][classes[0]]],
+                                                                     "Support_Positive": [report["support"][classes[1]]],
+                                                                     "TN": [cm[0,0]],
+                                                                     "FP": [cm[0,1]],
+                                                                     "FN": [cm[1,0]],
+                                                                     "TP": [cm[1,1]],
+                                                                     "Precision_False": [report["precision"][classes[0]]],
+                                                                     "Precision_True": [report["precision"][classes[1]]],
+                                                                     "Recall_False": [report["recall"][classes[0]]],
+                                                                     "Recall_True": [report["recall"][classes[1]]],
+                                                                     "AUC": [auc],
+                                                                     "AUC-PR": [auc_pr]}))
+
+
+results_path = data_path + "/results/w2v_results_numabstracts_" + str(len(dtf)) + ".csv"
+
+results_file.to_csv(results_path)
 
 toc = time.perf_counter()
 logger.info(f"whole script for {len(dtf)} in {toc-tic} seconds")
