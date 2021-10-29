@@ -112,8 +112,8 @@ use_embeddings = False #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabstracts_79431_embeddinglength_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
 train_new = True #if True new embeddings are trained
-num_epochs_for_embedding_list = [10] #number of epochs to train the word embeddings
-num_epochs_for_classification_list= [15] #number of epochs to train the the classifier
+num_epochs_for_embedding_list = [1,2] #number of epochs to train the word embeddings
+num_epochs_for_classification_list= [1,2] #number of epochs to train the the classifier
 embedding_vector_length_list = [300]
 window_size_list = [6]
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
@@ -186,10 +186,10 @@ results_file = pd.DataFrame({"training_length":[],
                              "FP":[],
                              "FN":[],
                              "TP":[],
-                             "Precision_False":[],
-                             "Precision_True":[],
-                             "Recall_False":[],
-                             "Recall_True":[],
+                             "Precision_Negative":[],
+                             "Precision_Positive":[],
+                             "Recall_Negative":[],
+                             "Recall_Positive":[],
                              "AUC":[],
                              "AUC-PR":[]})
 
@@ -513,6 +513,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
 
                 logger.info("ENCODING FEATURES")
 
+                '''
                 random_test_labels = False
 
                 if random_test_labels:
@@ -523,6 +524,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                         newvec.append(random.choice(uniquelabels))
 
                     y_train = pd.DataFrame({"y": newvec})
+                '''
 
                 ## encode y
                 dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
@@ -585,14 +587,16 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                     ## test
                     logger.info("TEST CALC")
                     predicted_prob = model.predict(X_test)
-                    predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
+                    predicted_bin = [np.argmax(pred) for pred in predicted_prob]
+                    predicted = [dic_y_mapping[pred] for pred in predicted_bin]
                     logger.info("TEST CALC FINISHED")
 
 
                     y_test = dtf_test[label_field].values
-                    classes = np.unique(y_test)
+                    y_test_bin = np.array([inverse_dic[y] for y in y_test])
+                    classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
 
-                    cm = metrics.confusion_matrix(y_test, predicted)
+                    cm = metrics.confusion_matrix(y_test_bin, predicted_bin)
                     logger.info("confusion matrix: " + str(cm))
 
                     '''
@@ -605,12 +609,11 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                     logger.info("ACCURACY, PRECISION, RECALL")
 
                     ## encode y
-                    y_test_bin = np.array([inverse_dic[y] for y in y_test])
 
-                    auc = metrics.roc_auc_score(y_test, predicted_prob[:, 1])
+                    auc = metrics.roc_auc_score(y_test_bin, predicted_prob[:, 1])
                     precision, recall, threshold = metrics.precision_recall_curve(y_test_bin, predicted_prob[:, 1])
                     auc_pr = metrics.auc(recall, precision)
-                    report = pd.DataFrame(metrics.classification_report(y_test, predicted,output_dict=True)).transpose()
+                    report = pd.DataFrame(metrics.classification_report(y_test, predicted, output_dict=True)).transpose()
                     report.loc["auc"] = [auc]*len(report.columns)
                     report.loc["auc_pr"] = [auc_pr] * len(report.columns)
 
@@ -627,6 +630,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                         sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)
                         ax.set(xlabel="Pred", ylabel="True", xticklabels=classes, yticklabels=classes, title="Confusion matrix")
                         plt.yticks(rotation=0)
+                        #plt.show()
                         plt.savefig(data_path +"/results/word2vec_ortho_hetero.png", bbox_inches='tight')
 
 
@@ -645,10 +649,10 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                                                                      "FP": [cm[0,1]],
                                                                      "FN": [cm[1,0]],
                                                                      "TP": [cm[1,1]],
-                                                                     "Precision_False": [report["precision"][classes[0]]],
-                                                                     "Precision_True": [report["precision"][classes[1]]],
-                                                                     "Recall_False": [report["recall"][classes[0]]],
-                                                                     "Recall_True": [report["recall"][classes[1]]],
+                                                                     "Precision_Negative": [report["precision"][classes[0]]],
+                                                                     "Precision_Positive": [report["precision"][classes[1]]],
+                                                                     "Recall_Negative": [report["recall"][classes[0]]],
+                                                                     "Recall_Positive": [report["recall"][classes[1]]],
                                                                      "AUC": [auc],
                                                                      "AUC-PR": [auc_pr]}))
 
