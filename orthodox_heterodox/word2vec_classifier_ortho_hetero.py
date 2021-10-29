@@ -109,18 +109,19 @@ save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
-#which_embeddings = "word2vec_numabstracts_79431_embeddinglength_300_epochs_30" #specify model to use here
+#which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
 train_new = True #if True new embeddings are trained
 num_epochs_for_embedding_list = [15] #number of epochs to train the word embeddings
 num_epochs_for_classification_list= [10] #number of epochs to train the the classifier
 embedding_vector_length_list = [300]
-window_size_list = [4]
+window_size_list = [6]
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
 embedding_only = False
 save_results = True
 test_size = 0.1
-oversampling = False #if "False" --> undersampling
+training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality"
+embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False
 ############################################
 
 parameters = """PARAMETERS:
@@ -136,9 +137,9 @@ window_size_list = """ + str(window_size_list) + """
 max_length_of_document_vector = """ + str(max_length_of_document_vector) + """
 embedding_only = """ + str(embedding_only) + """
 save_results = """ + str(save_results) + """
-test_size = """ + str(test_size)
-
-
+test_size = """ + str(test_size) + """
+training_set = """ + str(training_set) + """
+embedding_set = """ + str(embedding_set)
 
 
 def monitor_process():
@@ -180,6 +181,9 @@ results_file = pd.DataFrame({"training_length":[],
                              "embedding_vector_length":[],
                              "window_size":[],
                              "max_length_of_document_vector":[],
+                             "training_set":[],
+                             "embedding_set":[],
+                             "test_size": [],
                              "Negative_Label":[],
                              "Positive_Label":[],
                              "Support_Negative":[],
@@ -193,7 +197,8 @@ results_file = pd.DataFrame({"training_length":[],
                              "Recall_Negative":[],
                              "Recall_Positive":[],
                              "AUC":[],
-                             "AUC-PR":[]})
+                             "AUC-PR":[],
+                             "MCC":[]})
 
 
 if use_gigaword + use_embeddings + train_new != 1:
@@ -233,23 +238,63 @@ dtf_train, dtf_test = model_selection.train_test_split(dtf, test_size=test_size)
 #balanbce dataset
 logger.info("BALANCE TRAINING SET")
 
-if oversampling:
+
+
+if training_set == "oversample":
     over_sampler = RandomOverSampler(random_state=42)
     X_train, y_train = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean]}), pd.DataFrame({"y":dtf_train[label_field]}))
 
-else:
+elif training_set == "undersample":
     under_sampler = RandomUnderSampler(random_state=42)
     X_train, y_train = under_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean]}), pd.DataFrame({"y":dtf_train[label_field]}))
+
+else:
+    X_train = pd.DataFrame({"X": dtf_train[text_field_clean]})
+    y_train = pd.DataFrame({"y": dtf_train[label_field]})
+
+
+
+
+
+
+if embedding_set == "oversample":
+    over_sampler = RandomOverSampler(random_state=42)
+    X_embed, y_embed = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean]}), pd.DataFrame({"y":dtf_train[label_field]}))
+
+elif embedding_set == "undersample":
+    under_sampler = RandomUnderSampler(random_state=42)
+    X_embed, y_embed = under_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean]}), pd.DataFrame({"y":dtf_train[label_field]}))
+
+elif embedding_set == "heterodox":
+    X_embed = pd.DataFrame({"X": dtf_train.loc[dtf_train[label_field] == "heterodox"][text_field_clean]})
+    y_embed = pd.DataFrame({"y": dtf_train.loc[dtf_train[label_field] == "heterodox"][label_field]})
+
+elif embedding_set == "samequality":
+    X_embed = pd.DataFrame({"X": dtf_train.loc[dtf_train[label_field] == "samequality"][text_field_clean]})
+    y_embed = pd.DataFrame({"y": dtf_train.loc[dtf_train[label_field] == "samequality"][label_field]})
+
+else:
+    X_embed = pd.DataFrame({"X": dtf_train[text_field_clean]})
+    y_embed = pd.DataFrame({"y": dtf_train[label_field]})
 
 
 
 X_train_series = X_train.squeeze(axis=1)
 y_train_series = y_train.squeeze(axis=1)
 
+X_embed_series = X_embed.squeeze(axis=1)
+y_embed_series = y_embed.squeeze(axis=1)
+
 if plot == 1 or plot == 2:
     fig, ax = plt.subplots()
     fig.suptitle("Label Distribution in Training Data", fontsize=12)
     y_train_series.value_counts().plot(kind="barh", legend=False, ax=ax).grid(axis='x')
+    plt.show()
+
+if plot == 1 or plot == 2:
+    fig, ax = plt.subplots()
+    fig.suptitle("Label Distribution in Embedding Data", fontsize=12)
+    y_embed_series.value_counts().plot(kind="barh", legend=False, ax=ax).grid(axis='x')
     plt.show()
 
 
@@ -278,7 +323,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
 
             logger.info("FEATURE ENGINEERING FOR TRAINING SET")
 
-            corpus = X_train_series
+            corpus = X_embed_series
 
 
             ## create list of lists of unigrams
@@ -304,7 +349,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
 
                 modelname_raw = "glove-wiki-gigaword-" + str(embedding_vector_length)
 
-                modelname = "glove-wiki-gigaword-" + str(embedding_vector_length) + "_numabstracts_" + str(len(dtf))
+                modelname = "glove-wiki-gigaword-" + str(embedding_vector_length) + "_numabs_" + str(len(dtf))
 
                 pretrained_vectors = modelname_raw
 
@@ -325,7 +370,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
             if use_embeddings:
                 load_embeddings_start = time.perf_counter()
 
-                modelname = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_oversampling_" + str(oversampling) + "_testsize_" + str(test_size)
+                modelname = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
 
                 pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
 
@@ -347,7 +392,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
             if train_new:
                 train_embeddings_start = time.perf_counter()
 
-                modelname_raw = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + str(embedding_vector_length) + "_embeddingepochs_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_oversampling_" + str(oversampling) + "_testsize_" + str(test_size)
+                modelname_raw = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
 
                 modelname = "newembedding" + str(modelname_raw)
 
@@ -406,6 +451,31 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                 tokenizer = kprocessing.text.Tokenizer(lower=True, split=' ', oov_token="NaN", filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
                 tokenizer.fit_on_texts(lst_corpus)
                 dic_vocabulary = tokenizer.word_index
+
+
+
+
+
+                corpus = X_train_series
+
+
+                ## create list of n-grams
+                lst_corpus = []
+                for string in corpus:
+                    lst_words = string.split()
+                    lst_grams = [" ".join(lst_words[i:i+1]) for i in range(0, len(lst_words), 1)]
+                    lst_corpus.append(lst_grams)
+
+                ## detect common bigrams and trigrams using the fitted detectors
+                lst_corpus = list(bigrams_detector[lst_corpus])
+                lst_corpus = list(trigrams_detector[lst_corpus])
+
+
+
+
+
+
+
 
                 ## create sequence
                 lst_text2seq = tokenizer.texts_to_sequences(lst_corpus)
@@ -583,7 +653,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                              ax22.plot(training.history['val_'+metric], label=metric)
                         ax22.set_ylabel("Score", color="steelblue")
 
-                        training_plot_path = data_path + "/results/w2v_training_plot_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".png"
+                        training_plot_path = data_path + "/results/w2v_training_plot_" + str(modelname) + "_classifepo_" + str(num_epochs_for_classification) + "_maxabslen_" + str(max_length_of_document_vector) + ".png"
 
                         plt.savefig(training_plot_path, bbox_inches='tight')
 
@@ -604,7 +674,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                     logger.info("confusion matrix: " + str(cm))
 
                     '''
-                    cm_path = data_path + "/results/w2v_cm_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
+                    cm_path = data_path + "/results/w2v_cm_" + str(modelname) + "_classifepo_" + str(num_epochs_for_classification) + "_maxabslen_" + str(max_length_of_document_vector) + ".csv"
                     np.savetxt(cm_path, cm, delimiter=",", fmt='%1.0f')
                     '''
 
@@ -617,6 +687,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                     auc = metrics.roc_auc_score(y_test_bin, predicted_prob[:, 1])
                     precision, recall, threshold = metrics.precision_recall_curve(y_test_bin, predicted_prob[:, 1])
                     auc_pr = metrics.auc(recall, precision)
+                    mcc = metrics.matthews_corrcoef(y_test_bin, predicted_bin)
                     report = pd.DataFrame(metrics.classification_report(y_test, predicted, output_dict=True)).transpose()
                     report.loc["auc"] = [auc]*len(report.columns)
                     report.loc["auc_pr"] = [auc_pr] * len(report.columns)
@@ -624,7 +695,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                     logger.info("Detail:")
                     logger.info(report)
                     '''
-                    report_path = data_path + "/results/w2v_report_" + str(modelname) + "_classificatinepochs_" + str(num_epochs_for_classification) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
+                    report_path = data_path + "/results/w2v_report_" + str(modelname) + "_classifepo_" + str(num_epochs_for_classification) + "_maxabslen_" + str(max_length_of_document_vector) + ".csv"
                     report.to_csv(report_path)
                     '''
 
@@ -645,6 +716,9 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                                                                      "embedding_vector_length": [embedding_vector_length],
                                                                      "window_size": [window_size],
                                                                      "max_length_of_document_vector": [max_length_of_document_vector],
+                                                                     "training_set":[training_set],
+                                                                     "embedding_set":[embedding_set],
+                                                                     "test_size": [test_size],
                                                                      "Negative_Label": [classes[0]],
                                                                      "Positive_Label": [classes[1]],
                                                                      "Support_Negative": [report["support"][classes[0]]],
@@ -658,12 +732,13 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                                                                      "Recall_Negative": [report["recall"][classes[0]]],
                                                                      "Recall_Positive": [report["recall"][classes[1]]],
                                                                      "AUC": [auc],
-                                                                     "AUC-PR": [auc_pr]}))
+                                                                     "AUC-PR": [auc_pr],
+                                                                     "MCC": [mcc]}))
 
 if save_results:
-    embedding_path = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embeddingepochs_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list) + "_oversampling_" + str(oversampling) + "_testsize_" + str(test_size)
+    embedding_path = "numabs_" + str(len(dtf)) + "_embedlen_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embedepo_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
 
-    results_path = data_path + "/results/w2v_report_" + str(embedding_path) + "_classificatinepochs_" + '_'.join(str(e) for e in num_epochs_for_classification_list) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
+    results_path = data_path + "/results/w2v_results_" + str(embedding_path) + "_classifepo_" + '_'.join(str(e) for e in num_epochs_for_classification_list) + "_maxabslen_" + str(max_length_of_document_vector) + ".csv"
 
     results_file.to_csv(results_path)
 
