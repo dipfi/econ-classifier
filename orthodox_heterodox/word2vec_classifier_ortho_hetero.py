@@ -108,16 +108,17 @@ cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
-use_embeddings = True #if True a trained model needs to be selected below
+use_embeddings = False #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabstracts_79431_embeddinglength_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
-train_new = False #if True new embeddings are trained
-num_epochs_for_embedding_list = [5] #number of epochs to train the word embeddings
-num_epochs_for_classification_list= [1,2,3] #number of epochs to train the the classifier
+train_new = True #if True new embeddings are trained
+num_epochs_for_embedding_list = [10] #number of epochs to train the word embeddings
+num_epochs_for_classification_list= [15] #number of epochs to train the the classifier
 embedding_vector_length_list = [300]
-window_size_list = [4]
+window_size_list = [6]
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
 embedding_only = False
+save_results = False
 ############################################
 
 parameters = """PARAMETERS:
@@ -131,8 +132,8 @@ num_epochs_for_classification_list = """ + str(num_epochs_for_classification_lis
 embedding_vector_length_list = """ + str(embedding_vector_length_list) + """
 window_size_list = """ + str(window_size_list) + """
 max_length_of_document_vector = """ + str(max_length_of_document_vector) + """
-embedding_only = """ + str(embedding_only)
-
+embedding_only = """ + str(embedding_only) + """
+save_results = """ + str(save_results)
 
 
 
@@ -346,7 +347,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
 
                 modelname = "newembedding" + str(modelname_raw)
 
-                nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=embedding_vector_length, window=window_size, sg=1, epochs=num_epochs_for_embedding, workers = cores, callbacks = None)
+                nlp = gensim.models.word2vec.Word2Vec(lst_corpus, vector_size=embedding_vector_length, window=window_size, sg=1, epochs=num_epochs_for_embedding, workers = cores)
 
                 nlp.save(str(data_path) + "/" + embedding_folder + "/" + modelname_raw)
 
@@ -651,10 +652,12 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                                                                      "AUC": [auc],
                                                                      "AUC-PR": [auc_pr]}))
 
+if save_results:
+    embedding_path = "word2vec_numabstracts_" + str(len(dtf)) + "_embeddinglength_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embeddingepochs_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list)
 
-results_path = data_path + "/results/w2v_results_numabstracts_" + str(len(dtf)) + ".csv"
+    results_path = data_path + "/results/w2v_report_" + str(embedding_path) + "_classificatinepochs_" + '_'.join(str(e) for e in num_epochs_for_classification_list) + "_maxabstractlength_" + str(max_length_of_document_vector) + ".csv"
 
-results_file.to_csv(results_path)
+    results_file.to_csv(results_path)
 
 toc = time.perf_counter()
 logger.info(f"whole script for {len(dtf)} in {toc-tic} seconds")
