@@ -245,6 +245,8 @@ for index, all_test in all_journals.iterrows():
 
     logger.info("TRAIN TEST SPLIT")
 
+    label = all_test[label_field]
+
     test_journal = all_test["Journal"]
 
     logger.info("Journal = " + str(test_journal))
@@ -364,7 +366,7 @@ for index, all_test in all_journals.iterrows():
 
                     modelname_raw = "glove-wiki-gigaword-" + str(embedding_vector_length)
 
-                    modelname = "glove-wiki-gigaword-" + str(embedding_vector_length) + "_numabs_" + str(len(dtf))
+                    modelname = modelname_raw + "_word2vec_" + str(test_journal) + "numabs_" + str(len(dtf))
 
                     pretrained_vectors = modelname_raw
 
@@ -385,7 +387,7 @@ for index, all_test in all_journals.iterrows():
                 if use_embeddings:
                     load_embeddings_start = time.perf_counter()
 
-                    modelname = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
+                    modelname = "word2vec_" + str(test_journal) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set)
 
                     pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
 
@@ -407,7 +409,7 @@ for index, all_test in all_journals.iterrows():
                 if train_new:
                     train_embeddings_start = time.perf_counter()
 
-                    modelname_raw = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
+                    modelname_raw = "word2vec_" + str(test_journal.replace(" ", "_")) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set)
 
                     modelname = "newembedding" + str(modelname_raw)
 
@@ -763,7 +765,7 @@ for index, all_test in all_journals.iterrows():
                                                                          "MCC": [mcc]}))
                         '''
 
-                        label = all_test[label_field]
+
                         correct_classifications = sum([pred == label for pred in predicted])
                         incorrect_classifications = sum([pred != label for pred in predicted])
 
