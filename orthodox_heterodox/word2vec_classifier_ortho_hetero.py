@@ -112,16 +112,16 @@ use_embeddings = False #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
 train_new = True #if True new embeddings are trained
-num_epochs_for_embedding_list = [15] #number of epochs to train the word embeddings
-num_epochs_for_classification_list= [10] #number of epochs to train the the classifier
-embedding_vector_length_list = [300]
-window_size_list = [6]
-max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7)
+num_epochs_for_embedding_list = [12, 15, 18] #number of epochs to train the word embeddings ; sugegstion: 10(-15) (undersampling training)
+num_epochs_for_classification_list= [15] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
+embedding_vector_length_list = [300] #suggesion: 300
+window_size_list = [4,6] #suggesion: 8
+max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 8
 embedding_only = False
 save_results = True
-test_size = 0.1
-training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality"
-embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False
+test_size = 0.1 #suggestion: 0.1
+training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
+embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False ; suggestion: False
 ############################################
 
 parameters = """PARAMETERS:
@@ -691,6 +691,7 @@ for num_epochs_for_embedding in num_epochs_for_embedding_list:
                     report = pd.DataFrame(metrics.classification_report(y_test, predicted, output_dict=True)).transpose()
                     report.loc["auc"] = [auc]*len(report.columns)
                     report.loc["auc_pr"] = [auc_pr] * len(report.columns)
+                    report.loc["mcc"] = [mcc] * len(report.columns)
 
                     logger.info("Detail:")
                     logger.info(report)
