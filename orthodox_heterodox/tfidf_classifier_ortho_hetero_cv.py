@@ -295,19 +295,19 @@ all_journals = dtf[["Journal", label_field]].drop_duplicates().copy()
 
 results = pd.DataFrame()
 count = 0
-for index, test_journal in all_journals.iterrows():
+for index, all_test in all_journals.iterrows():
     start_loop = time.perf_counter()
     count += 1
     logger.info("For Loop " + str(count) + " started")
 
-    all_test = test_journal["Journal"]
+    test_journal = all_test["Journal"]
 
-    logger.info("Test Journal: " + test_journal["Journal"])
-    logger.info("Test Journal label: " + test_journal[label_field])
+    logger.info("Test Journal: " + all_test["Journal"])
+    logger.info("Test Journal label: " + all_test[label_field])
 
     ## split dataset
-    dtf_test = dtf[dtf["Journal"] == all_test]
-    dtf_train = dtf[dtf["Journal"] != all_test]
+    dtf_test = dtf[dtf["Journal"] == test_journal]
+    dtf_train = dtf[dtf["Journal"] != test_journal]
 
     dtf_train = dtf_train[[text_field_clean, label_field]]
     dtf_test = dtf_test[[text_field_clean, label_field]]
@@ -434,11 +434,11 @@ for index, test_journal in all_journals.iterrows():
     ## Accuracy, Precision, Recall
     logger.info("ACCURACY, PRECISION, RECALL")
 
-    label = test_journal[label_field]
+    label = all_test[label_field]
     correct_classifications = sum(predicted == label)
     incorrect_classifications = sum(predicted != label)
 
-    result = pd.DataFrame({"name": [all_test],
+    result = pd.DataFrame({"name": [test_journal],
                             "label": [label],
                             "correct_classifications": [correct_classifications],
                             "incorrect_classifications": [incorrect_classifications]})

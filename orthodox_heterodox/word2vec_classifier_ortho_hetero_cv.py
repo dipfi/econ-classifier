@@ -235,6 +235,7 @@ if plot == 1 or plot == 2:
 TRAIN TEST SPLIT
 '''
 
+gigaword_loaded = False #dont change this
 all_journals = dtf[["Journal", label_field]].drop_duplicates().copy()
 
 loop_number = 0
@@ -364,9 +365,8 @@ for index, all_test in all_journals.iterrows():
 
                 ## fit w2v
                 if use_gigaword:
-                    gigaword_start = time.perf_counter()
-                    
                     if gigaword_loaded != True:
+                        gigaword_start = time.perf_counter()
 
                         modelname_raw = "glove-wiki-gigaword-" + str(embedding_vector_length)
     
@@ -386,9 +386,9 @@ for index, all_test in all_journals.iterrows():
                         
                         gigaword_loaded = True
 
-                    gigaword_end = time.perf_counter()
-                    gigaword_time = gigaword_end - gigaword_start
-                    logger.info(f"loading gigaword vectors in {gigaword_time} seconds")
+                        gigaword_end = time.perf_counter()
+                        gigaword_time = gigaword_end - gigaword_start
+                        logger.info(f"loading gigaword vectors in {gigaword_time} seconds")
 
                 if use_embeddings:
                     load_embeddings_start = time.perf_counter()
