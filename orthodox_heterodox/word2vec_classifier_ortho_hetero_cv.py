@@ -96,7 +96,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -107,19 +107,19 @@ label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
-use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
+use_gigaword = True #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
-train_new = True #if True new embeddings are trained
-num_epochs_for_embedding_list = [5] #number of epochs to train the word embeddings ; sugegstion: 10(-15) (undersampling training)
-num_epochs_for_classification_list= [5] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
+train_new = False #if True new embeddings are trained
+num_epochs_for_embedding_list = [15] #number of epochs to train the word embeddings ; sugegstion: 10(-15) (undersampling training)
+num_epochs_for_classification_list= [10] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
 embedding_vector_length_list = [300] #suggesion: 300
-window_size_list = [4] #suggesion: 8
+window_size_list = [8] #suggesion: 8
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 8
 embedding_only = False
 save_results = True
-results_file_name = "w2v_classifier_performance_per_journal.csv"
+results_file_name = "w2v_classifier_performance_per_journal_gigaword_10.csv"
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False ; suggestion: False
@@ -127,8 +127,9 @@ embedding_set = False # "oversample", "undersample", "heterodox", "samequality",
 
 parameters = """PARAMETERS:
 input_file_name = """ + input_file_name + """
+cores = """ + str(cores) + """
 use_gigaword = """ + str(use_gigaword) + """
-use_embeddings = """ + str(cores) + """
+use_embeddings = """ + str(use_embeddings) + """
 embedding_folder = """ + str(embedding_folder) + """
 train_new = """ + str(train_new) + """
 num_epochs_for_embedding_list = """ + str(num_epochs_for_embedding_list) + """
@@ -138,6 +139,7 @@ window_size_list = """ + str(window_size_list) + """
 max_length_of_document_vector = """ + str(max_length_of_document_vector) + """
 embedding_only = """ + str(embedding_only) + """
 save_results = """ + str(save_results) + """
+results_file_name = """ + str(results_file_name) + """
 test_size = """ + str(test_size) + """
 training_set = """ + str(training_set) + """
 embedding_set = """ + str(embedding_set)
@@ -363,22 +365,26 @@ for index, all_test in all_journals.iterrows():
                 ## fit w2v
                 if use_gigaword:
                     gigaword_start = time.perf_counter()
+                    
+                    if gigaword_loaded != True:
 
-                    modelname_raw = "glove-wiki-gigaword-" + str(embedding_vector_length)
-
-                    modelname = modelname_raw + "_word2vec_" + str(test_journal) + "numabs_" + str(len(dtf))
-
-                    pretrained_vectors = modelname_raw
-
-                    nlp = gensim_api.load(pretrained_vectors)
-
-                    word = "bad"
-                    nlp[word].shape
-                    nlp.most_similar(word)
-
-                    ## word embedding
-                    tot_words = [word] + [tupla[0] for tupla in nlp.most_similar(word, topn=20)]
-                    X = nlp[tot_words]
+                        modelname_raw = "glove-wiki-gigaword-" + str(embedding_vector_length)
+    
+                        modelname = modelname_raw + "_word2vec_" + str(test_journal) + "numabs_" + str(len(dtf))
+    
+                        pretrained_vectors = modelname_raw
+    
+                        nlp = gensim_api.load(pretrained_vectors)
+    
+                        word = "bad"
+                        nlp[word].shape
+                        nlp.most_similar(word)
+    
+                        ## word embedding
+                        tot_words = [word] + [tupla[0] for tupla in nlp.most_similar(word, topn=20)]
+                        X = nlp[tot_words]
+                        
+                        gigaword_loaded = True
 
                     gigaword_end = time.perf_counter()
                     gigaword_time = gigaword_end - gigaword_start
@@ -387,7 +393,7 @@ for index, all_test in all_journals.iterrows():
                 if use_embeddings:
                     load_embeddings_start = time.perf_counter()
 
-                    modelname = "word2vec_" + str(test_journal) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set)
+                    modelname = "word2vec_" + str(test_journal.replace(" ", "_")) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set)
 
                     pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
 
