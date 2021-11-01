@@ -94,7 +94,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
 input_file_size = "all"  # 10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -124,8 +124,8 @@ test_size = 0.1  # suggestion: 0.1
 training_set = "oversample"  # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 embedding_set = False  # "oversample", "undersample", "heterodox", "samequality", False ; suggestion: False
 
-sentiment = False
-max_features = 1000
+max_features = 1000 #for tfidf
+ngram_range = (1,2)
 ############################################
 
 parameters = """PARAMETERS:
@@ -233,6 +233,24 @@ if plot == 1 or plot == 2:
                                                                                              ax=ax).grid(axis='x')
     plt.show()
 
+
+embedding_path = "numabs_" + str(len(dtf)) + "_embedlen_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embedepo_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
+
+results_path = data_path + "/results/tfidf_results_" + str(embedding_path) + "_classifepo_" + '_'.join(str(e) for e in num_epochs_for_classification_list) + "_maxabslen_" + str(max_length_of_document_vector) + ".csv"
+
+results = pd.DataFrame({"time": [],
+                       "model": [],
+                       "journal": [],
+                       "label": [],
+                       "correct_classifications": [],
+                       "incorrect_classifications": [],
+                       "avg_abs_loss": [],
+                       "avg_squared_loss": []})
+
+results.to_csv(results_path, index=False)
+
+
+
 '''
 TRAIN TEST SPLIT
 '''
@@ -278,7 +296,7 @@ for index, all_test in all_journals.iterrows():
 
     logger.info("TFIDF VECTORIZER")
 
-    vectorizer = feature_extraction.text.TfidfVectorizer(max_features=max_features, ngram_range=(1,2))
+    vectorizer = feature_extraction.text.TfidfVectorizer(max_features=max_features, ngram_range=ngram_range)
 
     corpus = X_train["X"]
 
@@ -378,16 +396,28 @@ for index, all_test in all_journals.iterrows():
     correct_classifications = sum([pred == label for pred in predicted])
     incorrect_classifications = sum([pred != label for pred in predicted])
 
-    result = pd.DataFrame({"name": [test_journal],
+    elementwise_loss = np.array(predicted_bin) - np.array(predicted_bin) - predicted_prob[:, 1]
+    avg_abs_loss = np.mean(elementwise_loss)
+    avg_squared_loss = np.mean(np.square(elementwise_loss))
+
+    results_name = "tfidf_results_" + str(modelname) + "_classifepo_" + str(
+        num_epochs_for_classification) + "_maxabslen_" + str(max_length_of_document_vector)
+
+    result = pd.DataFrame({"time": [time.asctime()],
+                           "model": [results_name],
+                           "journal": [test_journal],
                            "label": [label],
                            "correct_classifications": [correct_classifications],
-                           "incorrect_classifications": [incorrect_classifications]})
+                           "incorrect_classifications": [incorrect_classifications],
+                           "avg_abs_loss": [avg_abs_loss],
+                           "avg_squared_loss": [avg_squared_loss]})
 
     if save_results:
-        results_path = data_path + "/" + results_file_name
         results = pd.read_csv(results_path)
         results = pd.concat([results, result])
         results.to_csv(results_path, index=False)
+
+        print("")
 
 toc = time.perf_counter()
 logger.info(f"whole script for {len(dtf)} in {toc - tic} seconds")

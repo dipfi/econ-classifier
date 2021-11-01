@@ -107,13 +107,13 @@ label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
 plot = 0 #0 = none, 1 = some, 2 = all
-use_gigaword = True #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
-use_embeddings = False #if True a trained model needs to be selected below
+use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
+use_embeddings = True #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
 train_new = False #if True new embeddings are trained
 num_epochs_for_embedding_list = [15] #number of epochs to train the word embeddings ; sugegstion: 10(-15) (undersampling training)
-num_epochs_for_classification_list= [10] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
+num_epochs_for_classification_list= [1] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
 embedding_vector_length_list = [300] #suggesion: 300
 window_size_list = [8] #suggesion: 8
 max_length_of_document_vector = 100 #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 8
@@ -227,6 +227,22 @@ if plot == 1 or plot == 2:
     dtf[label_field].reset_index().groupby(label_field).count().sort_values(by="index").plot(kind="barh", legend=False, ax=ax).grid(axis='x')
     plt.show()
 
+
+
+embedding_path = "numabs_" + str(len(dtf)) + "_embedlen_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embedepo_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
+
+results_path = data_path + "/results/w2v_results_" + str(embedding_path) + "_classifepo_" + '_'.join(str(e) for e in num_epochs_for_classification_list) + "_maxabslen_" + str(max_length_of_document_vector) + ".csv"
+
+results = pd.DataFrame({"time": [],
+                       "model": [],
+                       "journal": [],
+                       "label": [],
+                       "correct_classifications": [],
+                       "incorrect_classifications": [],
+                       "avg_abs_loss": [],
+                       "avg_squared_loss": []})
+
+results.to_csv(results_path, index=False)
 
 
 
@@ -473,14 +489,13 @@ for index, all_test in all_journals.iterrows():
                             ax.text(x, y, z, s=label)
 
                     '''
-
+                    logger.info("START TOKENIZE")
                     ## tokenize text
                     tokenizer = kprocessing.text.Tokenizer(lower=True, split=' ', oov_token="NaN", filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
                     tokenizer.fit_on_texts(lst_corpus)
                     dic_vocabulary = tokenizer.word_index
 
-
-
+                    logger.info("START CREATING CORPUS")
 
 
                     corpus = X_train_series
@@ -496,12 +511,6 @@ for index, all_test in all_journals.iterrows():
                     ## detect common bigrams and trigrams using the fitted detectors
                     lst_corpus = list(bigrams_detector[lst_corpus])
                     lst_corpus = list(trigrams_detector[lst_corpus])
-
-
-
-
-
-
 
 
                     ## create sequence
@@ -775,17 +784,27 @@ for index, all_test in all_journals.iterrows():
                         correct_classifications = sum([pred == label for pred in predicted])
                         incorrect_classifications = sum([pred != label for pred in predicted])
 
+                        elementwise_loss = np.array(predicted_bin)-np.array(predicted_bin)-predicted_prob[:,1]
+                        avg_abs_loss = np.mean(elementwise_loss)
+                        avg_squared_loss = np.mean(np.square(elementwise_loss))
 
-                        result = pd.DataFrame({"name": [test_journal],
+                        results_name = "w2v_results_" + str(modelname) + "_classifepo_" + str(num_epochs_for_classification) + "_maxabslen_" + str(max_length_of_document_vector)
+
+                        result = pd.DataFrame({"time":[time.asctime()],
+                                               "model": [results_name],
+                                                "journal": [test_journal],
                                                 "label": [label],
                                                 "correct_classifications": [correct_classifications],
-                                                "incorrect_classifications": [incorrect_classifications]})
+                                                "incorrect_classifications": [incorrect_classifications],
+                                               "avg_abs_loss": [avg_abs_loss],
+                                               "avg_squared_loss": [avg_squared_loss]})
 
                         if save_results:
-                            results_path = data_path + "/" + results_file_name
                             results = pd.read_csv(results_path)
                             results = pd.concat([results, result])
                             results.to_csv(results_path, index=False)
+
+                            print("")
     '''
     if save_results:
         embedding_path = "numabs_" + str(len(dtf)) + "_embedlen_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embedepo_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
