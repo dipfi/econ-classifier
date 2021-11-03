@@ -233,10 +233,7 @@ if plot == 1 or plot == 2:
                                                                                              ax=ax).grid(axis='x')
     plt.show()
 
-
-embedding_path = "numabs_" + str(len(dtf)) + "_embedlen_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embedepo_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
-
-results_path = data_path + "/results/tfidf_results_" + str(embedding_path) + "_classifepo_" + '_'.join(str(e) for e in num_epochs_for_classification_list) + "_maxabslen_" + str(max_length_of_document_vector) + ".csv"
+results_path = data_path + "/results/tfidf_results_max_features" + str(max_features) + "_trainingset_" + str(training_set) + ".csv"
 
 results = pd.DataFrame({"time": [],
                        "model": [],
@@ -370,6 +367,8 @@ for index, all_test in all_journals.iterrows():
 
     X_test = dtf_test[text_field_clean].values
 
+
+
     ''' PLAUSIBIBILITY CHECK
     X_test = X_train_vector.values.ravel()
     '''
@@ -378,6 +377,20 @@ for index, all_test in all_journals.iterrows():
     predicted_prob = model.predict_proba(X_test)
 
     y_test = dtf_test[label_field].values
+
+    logger.info("TEST CALC")
+    predicted_bin = [np.argmax(pred) for pred in predicted_prob]
+    predicted = [dic_y_mapping[pred] for pred in predicted_bin]
+    logger.info("TEST CALC FINISHED")
+
+    y_test_bin = np.array([inverse_dic[y] for y in y_test])
+    classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
+
+    cm = metrics.confusion_matrix(y_test_bin, predicted_bin)
+    logger.info("confusion matrix: " + str(cm))
+
+
+
 
     ''' PLAUSIBIBILITY CHECK
     y_test = y_train_vector.values.ravel()
@@ -400,8 +413,7 @@ for index, all_test in all_journals.iterrows():
     avg_abs_loss = np.mean(elementwise_loss)
     avg_squared_loss = np.mean(np.square(elementwise_loss))
 
-    results_name = "tfidf_results_" + str(modelname) + "_classifepo_" + str(
-        num_epochs_for_classification) + "_maxabslen_" + str(max_length_of_document_vector)
+    results_name = "tfidf_results_max_features" + str(max_features) + "_trainingset_" + str(training_set)
 
     result = pd.DataFrame({"time": [time.asctime()],
                            "model": [results_name],

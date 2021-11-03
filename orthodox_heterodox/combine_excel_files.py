@@ -30,7 +30,7 @@ import pandas as pd
 
 def combine_all_excel_in_folder(folder_name = "WOS_clarivate_lee_orthodox_samequality",
                           folder_path = "/WOS_clarivate_lee_orthodox_samequality/data",
-                          file_ending = '.xls',
+                          file_ending = '.xls'
                           ):
     folder = str(data_path + folder_path)
     files = os.listdir(folder)
@@ -38,14 +38,14 @@ def combine_all_excel_in_folder(folder_name = "WOS_clarivate_lee_orthodox_samequ
     for file in files:
         if file.endswith('.xls'):
             df = df.append(pd.read_excel(str(folder + "/" + file)), ignore_index=True)
-    df.head()
-    df.to_excel(str(folder + "/" + "combined_" + folder_name + ".xlsx"))
+    print(df.head())
+    df.to_excel(str(folder + "/" + "combined_" + folder_name + "new.xlsx"))
 
 def combine_csv(input_names = ["combined_WOS_clarivate_lee_orthodox_samequality.csv",
                                   "combined_WOS_clarivate_lee_heterodox.csv"],
                    labels = ["samequality",
                                   "heterodox"],
-                   output_name = "WOS_lee_heterodox_und_samequality.csv",
+                   output_name = "WOS_lee_heterodox_und_samequality_new.csv",
                    ):
 
     # reading the files
@@ -53,6 +53,7 @@ def combine_csv(input_names = ["combined_WOS_clarivate_lee_orthodox_samequality.
                                  "labels": labels})
     df = pd.DataFrame()
     for index, row in help_iterable.iterrows():
+        print(index)
         df_temp = pd.read_csv(str(data_path + "/" + row["input"]))
         df_temp["labels"] = row["labels"]
         df = df.append(df_temp, ignore_index=True)
