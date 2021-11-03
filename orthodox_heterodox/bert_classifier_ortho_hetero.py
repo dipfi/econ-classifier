@@ -299,20 +299,27 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
     logger.info("max_length_of_document_vector_loop Nr: " + str(max_length_of_document_vector_loop))
     logger.info("max_length_of_document_vector : " + str(max_length_of_document_vector))
 
+    ## Fearute engineering train set
+    logger.info("Fearute engineering train set")
 
     ## add special tokens
+    logger.info("add special tokens")
+
     maxqnans = np.int((max_length_of_document_vector - 20) / 2)
     corpus_tokenized = ["[CLS] " +
                         " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
                         " [SEP] " for txt in corpus]
 
     ## generate masks
+    logger.info("generate masks")
     masks = [[1] * len(txt.split(" ")) + [0] * (max_length_of_document_vector - len(txt.split(" "))) for txt in corpus_tokenized]
 
     ## padding
+    logger.info("padding")
     txt2seq = [txt + " [PAD]" * (max_length_of_document_vector - len(txt.split(" "))) if len(txt.split(" ")) != max_length_of_document_vector else txt for txt in corpus_tokenized]
 
     ## generate idx
+    logger.info("generate idx")
     idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
     minlen = min([len(i) for i in idx])
     idx = [i[:max_length_of_document_vector] for i in idx]
@@ -320,6 +327,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
 
     ## feature matrix
+    logger.info("feature matrix")
 
     if small_model:
         X_train = [np.asarray(idx, dtype='int32'), np.asarray(masks, dtype='int32')]
@@ -327,6 +335,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
     else:
 
         ## generate segments
+        logger.info("generate segments")
         segments = []
         for seq in txt2seq:
             temp, i = [], 0
@@ -343,11 +352,13 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
 
     ##CLASSIFIER
+    logger.info("CLASSIFIER")
 
 
     if small_model:
 
         ##DISTIL-BERT
+        logger.info("DISTIL-BERT")
 
         ## inputs
         idx = layers.Input((max_length_of_document_vector), dtype="int32", name="input_idx")
@@ -367,6 +378,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
         y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
 
         ## compile
+        logger.info("compile DISTIL-BERT")
         model = models.Model([idx, masks], y_out)
 
         for layer in model.layers[:3]:
@@ -378,6 +390,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
     else:
         ##BERT
+        logger.info("BERT")
 
         ## inputs
         idx = layers.Input((max_length_of_document_vector), dtype="int32", name="input_idx")
@@ -397,6 +410,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
         y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
 
         ## compile
+        logger.info("compile BERT")
         model = models.Model([idx, masks, segments], y_out)
 
         for layer in model.layers[:4]:
@@ -413,6 +427,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
 
     # Feature engineer Test set
+    logger.info("Feature engineer Test set")
 
     text_lst = [text[:-50] for text in dtf_test[text_field_clean]]
     text_lst = [' '.join(text.split()[:400]) for text in text_lst]
@@ -421,18 +436,22 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
     corpus = text_lst
 
     ## add special tokens
+    logger.info("add special tokens test")
     maxqnans = np.int((max_length_of_document_vector - 20) / 2)
     corpus_tokenized = ["[CLS] " +
                         " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
                         " [SEP] " for txt in corpus]
 
     ## generate masks
+    logger.info("generate masks test")
     masks = [[1] * len(txt.split(" ")) + [0] * (max_length_of_document_vector - len(txt.split(" "))) for txt in corpus_tokenized]
 
     ## padding
+    logger.info("padding test")
     txt2seq = [txt + " [PAD]" * (max_length_of_document_vector - len(txt.split(" "))) if len(txt.split(" ")) != max_length_of_document_vector_list else txt for txt in corpus_tokenized]
 
     ## generate idx
+    logger.info("generate idx test")
     idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
     minlen = min([len(i) for i in idx])
     idx = [i[:max_length_of_document_vector] for i in idx]
@@ -440,12 +459,14 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
 
     ## feature matrix
+    logger.info("feature matrix test")
 
     if small_model:
         X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32')]
 
     else:
         ## generate segments
+        logger.info("generate segments")
         segments = []
         for seq in txt2seq:
             temp, i = [], 0
@@ -462,6 +483,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
 
     ## encode y
+    logger.info("encode y)
     dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
     inverse_dic = {v:k for k,v in dic_y_mapping.items()}
     y_train_bin = np.array([inverse_dic[y] for y in y_train["y"]])
