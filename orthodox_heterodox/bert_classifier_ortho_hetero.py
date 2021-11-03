@@ -498,7 +498,6 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
             logger.info("TEST CALC")
             predicted_bin = [np.argmax(pred) for pred in predicted_prob]
-            predicted = [dic_y_mapping[pred] for pred in predicted_bin]
             logger.info("TEST CALC FINISHED")
 
             y_test_bin = np.array([inverse_dic[y] for y in y_test])
@@ -540,7 +539,11 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
                 results_path = data_path + "/results/" + str(results_file_name) + ".csv"
 
-                result = pd.DataFrame({"time": [time.asctime()],
+                now = time.asctime()
+                result_id= int(time.time()*1000)
+
+                result = pd.DataFrame({"time": [now],
+                                       "result_id": [result_id],
                                        "length":[len(dtf)],
                                         "max_length_of_document_vector": [max_length_of_document_vector],
                                         "training_set": [training_set],
@@ -571,6 +574,9 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
                 results = pd.read_csv(results_path)
                 results = pd.concat([results, result])
                 results.to_csv(results_path, index=False)
+
+                pd.DataFrame({"probabilities": predicted_prob[:,1]}).to_csv(data_path + "/pred_prob/" + str(result_id) + ".csv")
+
 
 
 
