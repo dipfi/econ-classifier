@@ -96,7 +96,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_10000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_30000"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -535,27 +535,28 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
                 results_path = data_path + "/results/" + str(results_file_name) + ".csv"
 
                 result = pd.DataFrame({"time": [time.asctime()],
-                                                "max_length_of_document_vector": [max_length_of_document_vector],
-                                                "training_set": [training_set],
-                                                "small_model": [small_model],
-                                                "batch_size": [batch_size],
-                                                "bert_epochs": [bert_epochs],
-                                                "test_size": [test_size],
-                                                "Negative_Label": [classes[0]],
-                                                "Positive_Label": [classes[1]],
-                                                "Support_Negative": [report["support"][classes[0]]],
-                                                "Support_Positive": [report["support"][classes[1]]],
-                                                "TN": [cm[0,0]],
-                                                "FP": [cm[0,1]],
-                                                "FN": [cm[1,0]],
-                                                "TP": [cm[1,1]],
-                                                "Precision_Negative": [report["precision"][classes[0]]],
-                                                "Precision_Positive": [report["precision"][classes[1]]],
-                                                "Recall_Negative": [report["recall"][classes[0]]],
-                                                "Recall_Positive": [report["recall"][classes[1]]],
-                                                "AUC": [auc],
-                                                "AUC-PR": [auc_pr],
-                                                "MCC": [mcc]})
+                                       "length":[len(dtf)],
+                                        "max_length_of_document_vector": [max_length_of_document_vector],
+                                        "training_set": [training_set],
+                                        "small_model": [small_model],
+                                        "batch_size": [batch_size],
+                                        "bert_epochs": [bert_epochs],
+                                        "test_size": [test_size],
+                                        "Negative_Label": [classes[0]],
+                                        "Positive_Label": [classes[1]],
+                                        "Support_Negative": [report["support"][classes[0]]],
+                                        "Support_Positive": [report["support"][classes[1]]],
+                                        "TN": [cm[0,0]],
+                                        "FP": [cm[0,1]],
+                                        "FN": [cm[1,0]],
+                                        "TP": [cm[1,1]],
+                                        "Precision_Negative": [report["precision"][classes[0]]],
+                                        "Precision_Positive": [report["precision"][classes[1]]],
+                                        "Recall_Negative": [report["recall"][classes[0]]],
+                                        "Recall_Positive": [report["recall"][classes[1]]],
+                                        "AUC": [auc],
+                                        "AUC-PR": [auc_pr],
+                                        "MCC": [mcc]})
 
                 results = pd.read_csv(results_path)
                 results = pd.concat([results, result])
