@@ -476,6 +476,8 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
         for bert_epochs in bert_epochs_list:
 
+            class_time_start = time.perf_counter()
+
             bert_epochs_loop += 1
 
             logger.info("max_length_of_document_vector_loop Nr: " + str(max_length_of_document_vector_loop))
@@ -528,7 +530,9 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
             logger.info("Detail:")
             logger.info(report)
 
+            class_time_total = time.perf_counter() - class_time_start
 
+            logger.info(f"classification with {bert_epochs} epochs batch size {batch_size} for {len(dtf)} samples in {class_time_total} seconds")
 
             if save_results:
                 logger.info("SAVING RESULTS")
@@ -561,7 +565,8 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
                                         "MCC": [mcc],
                                        "MSE_NEGATIVE":[mse_negative],
                                        "MSE_POSITIVE":[mse_positive],
-                                       "MSE_AVERAGE":[(mse_negative+mse_positive)/2]})
+                                       "MSE_AVERAGE":[(mse_negative+mse_positive)/2],
+                                       "duration": [class_time_total]})
 
                 results = pd.read_csv(results_path)
                 results = pd.concat([results, result])
