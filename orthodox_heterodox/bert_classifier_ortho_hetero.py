@@ -575,7 +575,9 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
                 results = pd.concat([results, result])
                 results.to_csv(results_path, index=False)
 
-                pd.DataFrame({"probabilities": predicted_prob[:,1]}).to_csv(data_path + "/pred_prob/" + str(result_id) + ".csv")
+                pred_prob_df = pd.DataFrame({"probabilities": predicted_prob[:,1],
+                                             "true_value": y_test_bin})
+                pred_prob_df.to_csv(data_path + "/pred_prob/" + str(result_id) + ".csv")
 
 
 
