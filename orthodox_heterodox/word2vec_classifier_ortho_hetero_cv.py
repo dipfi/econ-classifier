@@ -302,12 +302,12 @@ for index, all_test in all_journals.iterrows():
         X_embed, y_embed = under_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean]}), pd.DataFrame({"y":dtf_train[label_field]}))
 
     elif embedding_set == "heterodox":
-        X_embed = pd.DataFrame({"X": dtf_train.loc[dtf_train[label_field] == "heterodox"][text_field_clean]})
-        y_embed = pd.DataFrame({"y": dtf_train.loc[dtf_train[label_field] == "heterodox"][label_field]})
+        X_embed = pd.DataFrame({"X": dtf_train.loc[dtf_train[label_field] == "1heterodox"][text_field_clean]})
+        y_embed = pd.DataFrame({"y": dtf_train.loc[dtf_train[label_field] == "1heterodox"][label_field]})
 
     elif embedding_set == "samequality":
-        X_embed = pd.DataFrame({"X": dtf_train.loc[dtf_train[label_field] == "samequality"][text_field_clean]})
-        y_embed = pd.DataFrame({"y": dtf_train.loc[dtf_train[label_field] == "samequality"][label_field]})
+        X_embed = pd.DataFrame({"X": dtf_train.loc[dtf_train[label_field] == "0samequality"][text_field_clean]})
+        y_embed = pd.DataFrame({"y": dtf_train.loc[dtf_train[label_field] == "0samequality"][label_field]})
 
     else:
         X_embed = pd.DataFrame({"X": dtf_train[text_field_clean]})
@@ -642,7 +642,6 @@ for index, all_test in all_journals.iterrows():
 
                     ## encode y
                     dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
-                    dic_y_mapping = {0: "samequality", 1:"heterodox"}
                     inverse_dic = {v:k for k,v in dic_y_mapping.items()}
                     y_train_bin = np.array([inverse_dic[y] for y in y_train['y']])
 

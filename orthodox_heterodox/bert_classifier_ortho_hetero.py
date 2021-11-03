@@ -96,7 +96,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_30000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -129,7 +129,7 @@ embedding_set = False # "oversample", "undersample", "heterodox", "samequality",
 
 small_model = True
 batch_size_list = [64, 128]
-bert_epochs_list = [1]
+bert_epochs_list = [2]
 
 results_file_name = "bert_results"
 ############################################
@@ -372,7 +372,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
         for layer in model.layers[:3]:
             layer.trainable = False
 
-        model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['mse'])
 
         model.summary()
 
@@ -402,7 +402,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
         for layer in model.layers[:4]:
             layer.trainable = False
 
-        model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['mse'])
 
         model.summary()
 
@@ -517,6 +517,8 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
             auc = metrics.roc_auc_score(y_test_bin, predicted_prob[:, 1])
             precision, recall, threshold = metrics.precision_recall_curve(y_test_bin, predicted_prob[:, 1])
             auc_pr = metrics.auc(recall, precision)
+            mse_negative = metrics.mean_squared_error(y_test_bin[y_test_bin == 0], predicted_prob[:, 1][y_test_bin == 0])
+            mse_positive = metrics.mean_squared_error(y_test_bin[y_test_bin == 1], predicted_prob[:, 1][y_test_bin == 1])
             mcc = metrics.matthews_corrcoef(y_test_bin, predicted_bin)
             report = pd.DataFrame(metrics.classification_report(y_test, predicted, output_dict=True)).transpose()
             report.loc["auc"] = [auc] * len(report.columns)
@@ -556,7 +558,10 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
                                         "Recall_Positive": [report["recall"][classes[1]]],
                                         "AUC": [auc],
                                         "AUC-PR": [auc_pr],
-                                        "MCC": [mcc]})
+                                        "MCC": [mcc],
+                                       "MSE_NEGATIVE":[mse_negative],
+                                       "MSE_POSITIVE":[mse_positive],
+                                       "MSE_AVERAGE":[(mse_negative+mse_positive)/2]})
 
                 results = pd.read_csv(results_path)
                 results = pd.concat([results, result])

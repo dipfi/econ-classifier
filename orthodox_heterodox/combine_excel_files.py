@@ -43,8 +43,8 @@ def combine_all_excel_in_folder(folder_name = "WOS_clarivate_lee_orthodox_samequ
 
 def combine_csv(input_names = ["combined_WOS_clarivate_lee_orthodox_samequality.csv",
                                   "combined_WOS_clarivate_lee_heterodox.csv"],
-                   labels = ["samequality",
-                                  "heterodox"],
+                   labels = ["0samequality",
+                                "1heterodox"],
                    output_name = "WOS_lee_heterodox_und_samequality_new.csv",
                    ):
 
