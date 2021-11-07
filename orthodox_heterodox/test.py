@@ -1,6 +1,11 @@
-import pandas as pd
+import numpy as np
+
+random_prob = np.random.rand(10000)
+random_labels = np.random.rand(10000)>0.9
+random_mse_pos = np.mean((random_labels[random_labels==1] - random_prob[random_labels==1])**2)
+random_mse_neg = np.mean((random_labels[random_labels!=1] - random_prob[random_labels!=1])**2)
+print(random_mse_pos)
+print(random_mse_neg)
 
 
-dtf = pd.read_csv("C:/Users/Damian/kDrive/Main/Master/Masterarbeit/Ash/dev/data/WOS_lee_heterodox_und_samequality_preprocessed.csv")
-dtf = dtf.sample(30000).copy()
-dtf.to_csv("C:/Users/Damian/kDrive/Main/Master/Masterarbeit/Ash/dev/data/WOS_lee_heterodox_und_samequality_preprocessed_30000.csv")
+

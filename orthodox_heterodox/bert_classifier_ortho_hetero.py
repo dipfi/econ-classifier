@@ -126,12 +126,13 @@ save_results = True
 test_size = 0.1 #suggestion: 0.1
 training_set = "undersample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False ; suggestion: False
+classifier_loss_function_list = ['binary_crossentropy', 'mean_squared_error', 'sparse_categorical_crossentropy'] #'binary_crossentropy'
 
 small_model = True
-batch_size_list = [64, 128]
-bert_epochs_list = [2]
+batch_size_list = [128]
+bert_epochs_list = [1]
 
-results_file_name = "bert_results"
+results_file_name = "bert_results_" + str(training_set)
 ############################################
 
 parameters = """PARAMETERS:
@@ -140,9 +141,11 @@ max_length_of_document_vector_list = """ + str(max_length_of_document_vector_lis
 save_results = """ + str(save_results) + """
 test_size = """ + str(test_size) + """
 training_set = """ + str(training_set) + """
+classifier_loss_function_list = """ + str(classifier_loss_function_list) + """
 small_model = """ + str(small_model) + """
 batch_size_list = """ + str(batch_size_list) + """
-bert_epochs_list = """ + str(bert_epochs_list)
+bert_epochs_list = """ + str(bert_epochs_list) + """
+results_file_name = """ + str(results_file_name)
 
 def monitor_process():
     ##monitor progress if run on local machine
@@ -354,71 +357,76 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
     ##CLASSIFIER
     logger.info("CLASSIFIER")
 
+    loss_loop = 0
+    for loss_function in classifier_loss_function_list:
+        loss_loop += 1
+        logger.info("loss_loop Nr = " + str(loss_loop))
+        logger.info("loss_function = " + str(loss_function))
 
-    if small_model:
+        if small_model:
 
-        ##DISTIL-BERT
-        logger.info("DISTIL-BERT")
+            ##DISTIL-BERT
+            logger.info("DISTIL-BERT")
 
-        ## inputs
-        idx = layers.Input((max_length_of_document_vector), dtype="int32", name="input_idx")
-        masks = layers.Input((max_length_of_document_vector), dtype="int32", name="input_masks")
-        # segments = layers.Input((max_length_of_document_vector), dtype="int32", name="input_segments")
+            ## inputs
+            idx = layers.Input((max_length_of_document_vector), dtype="int32", name="input_idx")
+            masks = layers.Input((max_length_of_document_vector), dtype="int32", name="input_masks")
+            # segments = layers.Input((max_length_of_document_vector), dtype="int32", name="input_segments")
 
-        ## pre-trained bert with config
-        config = transformers.DistilBertConfig(dropout=0.2, attention_dropout=0.2)
-        config.output_hidden_states = False
+            ## pre-trained bert with config
+            config = transformers.DistilBertConfig(dropout=0.2, attention_dropout=0.2)
+            config.output_hidden_states = False
 
-        nlp = transformers.TFDistilBertModel.from_pretrained('distilbert-base-uncased', config=config)
-        bert_out = nlp(idx, attention_mask=masks)[0]
+            nlp = transformers.TFDistilBertModel.from_pretrained('distilbert-base-uncased', config=config)
+            bert_out = nlp(idx, attention_mask=masks)[0]
 
-        ## fine-tuning
-        x = layers.GlobalAveragePooling1D()(bert_out)
-        x = layers.Dense(64, activation="relu")(x)
-        y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
+            ## fine-tuning
+            x = layers.GlobalAveragePooling1D()(bert_out)
+            x = layers.Dense(64, activation="relu")(x)
+            y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
 
-        ## compile
-        logger.info("compile DISTIL-BERT")
-        model = models.Model([idx, masks], y_out)
+            ## compile
+            logger.info("compile DISTIL-BERT")
+            model = models.Model([idx, masks], y_out)
 
-        for layer in model.layers[:3]:
-            layer.trainable = False
+            for layer in model.layers[:3]:
+                layer.trainable = False
 
-        model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['mse'])
+            model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['mse'])
 
-        model.summary()
+            model.summary()
 
-    else:
-        ##BERT
-        logger.info("BERT")
+        else:
+            ##BERT
+            logger.info("BERT")
 
-        ## inputs
-        idx = layers.Input((max_length_of_document_vector), dtype="int32", name="input_idx")
-        masks = layers.Input((max_length_of_document_vector), dtype="int32", name="input_masks")
-        segments = layers.Input((max_length_of_document_vector), dtype="int32", name="input_segments")
+            ## inputs
+            idx = layers.Input((max_length_of_document_vector), dtype="int32", name="input_idx")
+            masks = layers.Input((max_length_of_document_vector), dtype="int32", name="input_masks")
+            segments = layers.Input((max_length_of_document_vector), dtype="int32", name="input_segments")
 
-        ## pre-trained bert
-        nlp = transformers.TFBertModel.from_pretrained("bert-base-uncased")
-        bert_out = nlp([idx, masks, segments])
+            ## pre-trained bert
+            nlp = transformers.TFBertModel.from_pretrained("bert-base-uncased")
+            bert_out = nlp([idx, masks, segments])
 
-        sequence_out = bert_out.last_hidden_state
-        pooled_out = bert_out.pooler_output
+            sequence_out = bert_out.last_hidden_state
+            pooled_out = bert_out.pooler_output
 
-        ## fine-tuning
-        x = layers.GlobalAveragePooling1D() (sequence_out)
-        x = layers.Dense(64, activation="relu")(x)
-        y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
+            ## fine-tuning
+            x = layers.GlobalAveragePooling1D() (sequence_out)
+            x = layers.Dense(64, activation="relu")(x)
+            y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
 
-        ## compile
-        logger.info("compile BERT")
-        model = models.Model([idx, masks, segments], y_out)
+            ## compile
+            logger.info("compile BERT")
+            model = models.Model([idx, masks, segments], y_out)
 
-        for layer in model.layers[:4]:
-            layer.trainable = False
+            for layer in model.layers[:4]:
+                layer.trainable = False
 
-        model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['mse'])
+            model.compile(loss = classifier_loss_function, optimizer='adam', metrics=['mse'])
 
-        model.summary()
+            model.summary()
 
 
 
@@ -426,180 +434,182 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
 
 
 
-    # Feature engineer Test set
-    logger.info("Feature engineer Test set")
+        # Feature engineer Test set
+        logger.info("Feature engineer Test set")
 
-    text_lst = [text[:-50] for text in dtf_test[text_field_clean]]
-    text_lst = [' '.join(text.split()[:400]) for text in text_lst]
-    #text_lst = [text for text in text_lst if text]
+        text_lst = [text[:-50] for text in dtf_test[text_field_clean]]
+        text_lst = [' '.join(text.split()[:400]) for text in text_lst]
+        #text_lst = [text for text in text_lst if text]
 
-    corpus = text_lst
+        corpus = text_lst
 
-    ## add special tokens
-    logger.info("add special tokens test")
-    maxqnans = np.int((max_length_of_document_vector - 20) / 2)
-    corpus_tokenized = ["[CLS] " +
-                        " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
-                        " [SEP] " for txt in corpus]
+        ## add special tokens
+        logger.info("add special tokens test")
+        maxqnans = np.int((max_length_of_document_vector - 20) / 2)
+        corpus_tokenized = ["[CLS] " +
+                            " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
+                            " [SEP] " for txt in corpus]
 
-    ## generate masks
-    logger.info("generate masks test")
-    masks = [[1] * len(txt.split(" ")) + [0] * (max_length_of_document_vector - len(txt.split(" "))) for txt in corpus_tokenized]
+        ## generate masks
+        logger.info("generate masks test")
+        masks = [[1] * len(txt.split(" ")) + [0] * (max_length_of_document_vector - len(txt.split(" "))) for txt in corpus_tokenized]
 
-    ## padding
-    logger.info("padding test")
-    txt2seq = [txt + " [PAD]" * (max_length_of_document_vector - len(txt.split(" "))) if len(txt.split(" ")) != max_length_of_document_vector_list else txt for txt in corpus_tokenized]
+        ## padding
+        logger.info("padding test")
+        txt2seq = [txt + " [PAD]" * (max_length_of_document_vector - len(txt.split(" "))) if len(txt.split(" ")) != max_length_of_document_vector_list else txt for txt in corpus_tokenized]
 
-    ## generate idx
-    logger.info("generate idx test")
-    idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
-    minlen = min([len(i) for i in idx])
-    idx = [i[:max_length_of_document_vector] for i in idx]
+        ## generate idx
+        logger.info("generate idx test")
+        idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
+        minlen = min([len(i) for i in idx])
+        idx = [i[:max_length_of_document_vector] for i in idx]
 
 
 
-    ## feature matrix
-    logger.info("feature matrix test")
+        ## feature matrix
+        logger.info("feature matrix test")
 
-    if small_model:
-        X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32')]
+        if small_model:
+            X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32')]
 
-    else:
-        ## generate segments
-        logger.info("generate segments")
-        segments = []
-        for seq in txt2seq:
-            temp, i = [], 0
-            for token in seq.split(" "):
-                temp.append(i)
-                if token == "[SEP]":
-                    i += 1
-            segments.append(temp)
+        else:
+            ## generate segments
+            logger.info("generate segments")
+            segments = []
+            for seq in txt2seq:
+                temp, i = [], 0
+                for token in seq.split(" "):
+                    temp.append(i)
+                    if token == "[SEP]":
+                        i += 1
+                segments.append(temp)
 
-        X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32'), np.array(segments, dtype='int32')]
+            X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32'), np.array(segments, dtype='int32')]
 
 
 
 
 
-    ## encode y
-    logger.info("encode y)
-    dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
-    inverse_dic = {v:k for k,v in dic_y_mapping.items()}
-    y_train_bin = np.array([inverse_dic[y] for y in y_train["y"]])
+        ## encode y
+        logger.info("encode y")
+        dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
+        inverse_dic = {v:k for k,v in dic_y_mapping.items()}
+        y_train_bin = np.array([inverse_dic[y] for y in y_train["y"]])
 
-    batch_size_loop = 0
+        batch_size_loop = 0
 
-    for batch_size in batch_size_list:
+        for batch_size in batch_size_list:
 
-        batch_size_loop += 1
+            batch_size_loop += 1
 
-        bert_epochs_loop = 0
+            bert_epochs_loop = 0
 
-        for bert_epochs in bert_epochs_list:
+            for bert_epochs in bert_epochs_list:
 
-            class_time_start = time.perf_counter()
+                class_time_start = time.perf_counter()
 
-            bert_epochs_loop += 1
+                bert_epochs_loop += 1
 
-            logger.info("max_length_of_document_vector_loop Nr: " + str(max_length_of_document_vector_loop))
-            logger.info("max_length_of_document_vector : " + str(max_length_of_document_vector))
-            logger.info("batch_size Nr: " + str(batch_size_loop))
-            logger.info("batch_size : " + str(batch_size))
-            logger.info("bert_epochs_loop Nr: " + str(bert_epochs_loop))
-            logger.info("bert_epochs : " + str(bert_epochs))
+                logger.info("max_length_of_document_vector_loop Nr: " + str(max_length_of_document_vector_loop))
+                logger.info("max_length_of_document_vector : " + str(max_length_of_document_vector))
+                logger.info("batch_size Nr: " + str(batch_size_loop))
+                logger.info("batch_size : " + str(batch_size))
+                logger.info("bert_epochs_loop Nr: " + str(bert_epochs_loop))
+                logger.info("bert_epochs : " + str(bert_epochs))
 
-            ## train
-            training = model.fit(x=X_train, y=y_train_bin, batch_size=batch_size, epochs=bert_epochs, shuffle=True, verbose=1, validation_split=0.3)
+                ## train
+                training = model.fit(x=X_train, y=y_train_bin, batch_size=batch_size, epochs=bert_epochs, shuffle=True, verbose=1, validation_split=0.3)
 
-            ## test
-            predicted_prob = model.predict(X_test)
-            predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
+                ## test
+                predicted_prob = model.predict(X_test)
+                predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
 
-            y_test = dtf_test[label_field].values
+                y_test = dtf_test[label_field].values
 
-            logger.info("TEST CALC")
-            predicted_bin = [np.argmax(pred) for pred in predicted_prob]
-            logger.info("TEST CALC FINISHED")
+                logger.info("TEST CALC")
+                predicted_bin = [np.argmax(pred) for pred in predicted_prob]
+                logger.info("TEST CALC FINISHED")
 
-            y_test_bin = np.array([inverse_dic[y] for y in y_test])
-            classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
+                y_test_bin = np.array([inverse_dic[y] for y in y_test])
+                classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
 
-            cm = metrics.confusion_matrix(y_test_bin, predicted_bin)
-            logger.info("confusion matrix: " + str(cm))
+                cm = metrics.confusion_matrix(y_test_bin, predicted_bin)
+                logger.info("confusion matrix: " + str(cm))
 
-            ''' PLAUSIBIBILITY CHECK
-            y_test = y_train_vector.values.ravel()
-            '''
+                ''' PLAUSIBIBILITY CHECK
+                y_test = y_train_vector.values.ravel()
+                '''
 
-            ## Accuracy, Precision, Recall
-            logger.info("ACCURACY, PRECISION, RECALL")
+                ## Accuracy, Precision, Recall
+                logger.info("ACCURACY, PRECISION, RECALL")
 
-            ## encode y
+                ## encode y
 
-            auc = metrics.roc_auc_score(y_test_bin, predicted_prob[:, 1])
-            precision, recall, threshold = metrics.precision_recall_curve(y_test_bin, predicted_prob[:, 1])
-            auc_pr = metrics.auc(recall, precision)
-            mse_negative = metrics.mean_squared_error(y_test_bin[y_test_bin == 0], predicted_prob[:, 1][y_test_bin == 0])
-            mse_positive = metrics.mean_squared_error(y_test_bin[y_test_bin == 1], predicted_prob[:, 1][y_test_bin == 1])
-            mcc = metrics.matthews_corrcoef(y_test_bin, predicted_bin)
-            report = pd.DataFrame(metrics.classification_report(y_test, predicted, output_dict=True)).transpose()
-            report.loc["auc"] = [auc] * len(report.columns)
-            report.loc["auc_pr"] = [auc_pr] * len(report.columns)
-            report.loc["mcc"] = [mcc] * len(report.columns)
+                auc = metrics.roc_auc_score(y_test_bin, predicted_prob[:, 1])
+                precision, recall, threshold = metrics.precision_recall_curve(y_test_bin, predicted_prob[:, 1])
+                auc_pr = metrics.auc(recall, precision)
+                mse_negative = metrics.mean_squared_error(y_test_bin[y_test_bin == 0], predicted_prob[:, 1][y_test_bin == 0])
+                mse_positive = metrics.mean_squared_error(y_test_bin[y_test_bin == 1], predicted_prob[:, 1][y_test_bin == 1])
+                mcc = metrics.matthews_corrcoef(y_test_bin, predicted_bin)
+                report = pd.DataFrame(metrics.classification_report(y_test, predicted, output_dict=True)).transpose()
+                report.loc["auc"] = [auc] * len(report.columns)
+                report.loc["auc_pr"] = [auc_pr] * len(report.columns)
+                report.loc["mcc"] = [mcc] * len(report.columns)
 
-            logger.info("Detail:")
-            logger.info(report)
+                logger.info("Detail:")
+                logger.info(report)
 
-            class_time_total = time.perf_counter() - class_time_start
+                class_time_total = time.perf_counter() - class_time_start
 
-            logger.info(f"classification with {bert_epochs} epochs batch size {batch_size} for {len(dtf)} samples in {class_time_total} seconds")
+                logger.info(f"classification with {bert_epochs} epochs batch size {batch_size} for {len(dtf)} samples in {class_time_total} seconds")
 
-            if save_results:
-                logger.info("SAVING RESULTS")
-                embedding_path = "numabs_" + str(len(dtf)) + "_embedlen_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embedepo_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
+                if save_results:
+                    logger.info("SAVING RESULTS")
+                    embedding_path = "numabs_" + str(len(dtf)) + "_embedlen_" + '_'.join(str(e) for e in embedding_vector_length_list) + "_embedepo_" + '_'.join(str(e) for e in num_epochs_for_embedding_list) + "_window_" + '_'.join(str(e) for e in window_size_list) + "_train_" + str(training_set) + "_embed_" + str(embedding_set) + "_testsize_" + str(test_size)
 
-                results_path = data_path + "/results/" + str(results_file_name) + ".csv"
+                    results_path = data_path + "/results/" + str(results_file_name) + ".csv"
 
-                now = time.asctime()
-                result_id= int(time.time()*1000)
+                    now = time.asctime()
+                    result_id= int(time.time()*1000)
 
-                result = pd.DataFrame({"time": [now],
-                                       "result_id": [result_id],
-                                       "length":[len(dtf)],
-                                        "max_length_of_document_vector": [max_length_of_document_vector],
-                                        "training_set": [training_set],
-                                        "small_model": [small_model],
-                                        "batch_size": [batch_size],
-                                        "bert_epochs": [bert_epochs],
-                                        "test_size": [test_size],
-                                        "Negative_Label": [classes[0]],
-                                        "Positive_Label": [classes[1]],
-                                        "Support_Negative": [report["support"][classes[0]]],
-                                        "Support_Positive": [report["support"][classes[1]]],
-                                        "TN": [cm[0,0]],
-                                        "FP": [cm[0,1]],
-                                        "FN": [cm[1,0]],
-                                        "TP": [cm[1,1]],
-                                        "Precision_Negative": [report["precision"][classes[0]]],
-                                        "Precision_Positive": [report["precision"][classes[1]]],
-                                        "Recall_Negative": [report["recall"][classes[0]]],
-                                        "Recall_Positive": [report["recall"][classes[1]]],
-                                        "AUC": [auc],
-                                        "AUC-PR": [auc_pr],
-                                        "MCC": [mcc],
-                                       "MSE_NEGATIVE":[mse_negative],
-                                       "MSE_POSITIVE":[mse_positive],
-                                       "MSE_AVERAGE":[(mse_negative+mse_positive)/2],
-                                       "duration": [class_time_total]})
+                    result = pd.DataFrame({"time": [now],
+                                           "result_id": [result_id],
+                                           "length":[len(dtf)],
+                                            "max_length_of_document_vector": [max_length_of_document_vector],
+                                            "training_set": [training_set],
+                                            "small_model": [small_model],
+                                            "batch_size": [batch_size],
+                                            "bert_epochs": [bert_epochs],
+                                            "test_size": [test_size],
+                                            "Negative_Label": [classes[0]],
+                                            "Positive_Label": [classes[1]],
+                                            "Support_Negative": [report["support"][classes[0]]],
+                                            "Support_Positive": [report["support"][classes[1]]],
+                                            "TN": [cm[0,0]],
+                                            "FP": [cm[0,1]],
+                                            "FN": [cm[1,0]],
+                                            "TP": [cm[1,1]],
+                                            "Precision_Negative": [report["precision"][classes[0]]],
+                                            "Precision_Positive": [report["precision"][classes[1]]],
+                                            "Recall_Negative": [report["recall"][classes[0]]],
+                                            "Recall_Positive": [report["recall"][classes[1]]],
+                                            "AUC": [auc],
+                                            "AUC-PR": [auc_pr],
+                                            "MCC": [mcc],
+                                           "MSE_NEGATIVE":[mse_negative],
+                                           "MSE_POSITIVE":[mse_positive],
+                                           "MSE_AVERAGE":[(mse_negative+mse_positive)/2],
+                                           "duration": [class_time_total],
+                                           "loss_function":[loss_function],
+                                           "small_model":[small_model]})
 
-                results = pd.read_csv(results_path)
-                results = pd.concat([results, result])
-                results.to_csv(results_path, index=False)
+                    results = pd.read_csv(results_path)
+                    results = pd.concat([results, result])
+                    results.to_csv(results_path, index=False)
 
-                pred_prob_df = pd.DataFrame({"probabilities": predicted_prob[:,1],
-                                             "true_value": y_test_bin})
-                pred_prob_df.to_csv(data_path + "/pred_prob/" + str(result_id) + ".csv")
+                    pred_prob_df = pd.DataFrame({"probabilities": predicted_prob[:,1],
+                                                 "true_value": y_test_bin})
+                    pred_prob_df.to_csv(data_path + "/pred_prob/" + str(result_id) + ".csv")
 
 
 
