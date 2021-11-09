@@ -96,7 +96,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_10000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -126,7 +126,7 @@ save_results = True
 test_size = 0.1 #suggestion: 0.1
 training_set = "undersample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False ; suggestion: False
-classifier_loss_function_list = ['poisson', 'mean_squared_error', "kl_divergence", 'categorical_hinge', 'sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
+classifier_loss_function_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
 
 small_model = True
 batch_size_list = [128]
@@ -518,8 +518,6 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
                 logger.info("bert_epochs_loop Nr: " + str(bert_epochs_loop))
                 logger.info("bert_epochs : " + str(bert_epochs))
 
-                over_sampler = RandomOverSampler(random_state=42)
-                X_train, y_train = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field]}), pd.DataFrame({"y": dtf_train[label_field]}))
                 ## train
                 training = model.fit(x=X_train, y=y_train_bin, batch_size=batch_size, epochs=bert_epochs, shuffle=True, verbose=1, validation_split=0.3)
 
