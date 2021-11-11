@@ -11,6 +11,10 @@ import nltk
 import re
 import os
 
+## for evaluation
+from sklearn import feature_extraction, model_selection, naive_bayes, pipeline, manifold, preprocessing, feature_selection, metrics
+import numpy as np
+
 
 def hello_world():
     print("hello_world")
@@ -64,6 +68,160 @@ def save_data_csv(dtf,
 
     logger.info("Function ended: save_data_csv")
 
+
+def save_results(data_path,
+                 results_file_name,
+                 result,
+                 dtf_test,
+                 trainingset_id,
+                 result_id,
+                 predicted_prob,
+                 y_test_bin):
+
+    logger.info("Function started: save_results")
+
+    results_path = data_path + "/results/" + str(results_file_name) + ".csv"
+
+    try:
+        results = pd.read_csv(results_path)
+        results = pd.concat([results, result])
+        results.to_csv(results_path, index=False)
+    except FileNotFoundError:
+        results = result
+        results.to_csv(results_path, index=False)
+    except PermissionError:
+
+        counter = 0
+        trying_to_save = True
+        results = result
+
+        while trying_to_save and counter < 100:
+
+            try:
+                results_path_new = data_path + "/results/" + str(results_file_name) + str(counter) + ".csv"
+                results.to_csv(results_path_new, index=False)
+                trying_to_save = False
+            except PermissionError:
+                counter += 1
+
+    try:
+        journal = dtf_test["Journal"].tolist()
+    except:
+        journal = [None for i in range(len(dtf_test))]
+    try:
+        pubyear = dtf_test["Publication Year"].tolist()
+    except:
+        pubyear = [None for i in range(len(dtf_test))]
+    try:
+        WOS_ID = dtf_test["UT (Unique WOS ID)"].tolist()
+    except:
+        WOS_ID = [None for i in range(len(dtf_test))]
+
+    result_id_list = [result_id for i in range(len(dtf_test))]
+    trainingset_id_list = [trainingset_id for i in range(len(dtf_test))]
+
+    pred_prob_df = pd.DataFrame({"probabilities": predicted_prob[:, 1].tolist(),
+                                 "true_value": y_test_bin.tolist(),
+                                 "journal": journal,
+                                 "year": pubyear,
+                                 "ID": WOS_ID,
+                                 "result_id": result_id_list,
+                                 "trainingset_id": trainingset_id_list
+                                 })
+
+    pred_prob_df.to_csv(data_path + "/pred_prob/" + str(result_id) + ".csv", index=False)
+
+    logger.info("Function ended: save_results")
+
+    return results, pred_prob_df
+
+
+def evaluate(classes,
+             # y_test,
+             y_test_bin,
+             # predicted,
+             predicted_bin,
+             predicted_prob):
+
+    logger.info("Function started: evaluate")
+
+    cm = metrics.confusion_matrix(y_test_bin, predicted_bin)
+    logger.info("confusion matrix: " + str(cm))
+
+    try:
+        auc = metrics.roc_auc_score(y_test_bin, predicted_prob[:, 1])
+    except:
+        auc = None
+
+    try:
+        precision, recall, threshold = metrics.precision_recall_curve(y_test_bin, predicted_prob[:, 1])
+        auc_pr = metrics.auc(recall, precision)
+    except ValueError:
+        auc_pr = None
+
+    try:
+        mse_negative = metrics.mean_squared_error(y_test_bin[y_test_bin == 0], predicted_prob[:, 1][y_test_bin == 0])
+    except ValueError:
+        mse_negative = None
+
+    try:
+        mse_positive = metrics.mean_squared_error(y_test_bin[y_test_bin == 1], predicted_prob[:, 1][y_test_bin == 1])
+    except ValueError:
+        mse_positive = None
+
+    try:
+        mse_average = (mse_negative + mse_positive) / 2
+    except TypeError:
+        mse_average = None
+
+    try:
+        mcc = metrics.matthews_corrcoef(y_test_bin, predicted_bin)
+    except ValueError:
+        mcc = None
+
+    Negative_Label = classes[0]
+    Positive_Label = classes[1]
+    Support_Negative = len(y_test_bin[y_test_bin == 0])
+    Support_Positive = len(y_test_bin[y_test_bin == 1])
+    TN = np.sum([test == 0 and pred == 0 for test, pred in zip((y_test_bin).tolist(), (predicted_bin).tolist())])
+    FP = np.sum([test == 0 and pred == 1 for test, pred in zip((y_test_bin).tolist(), (predicted_bin).tolist())])
+    FN = np.sum([test == 1 and pred == 0 for test, pred in zip((y_test_bin).tolist(), (predicted_bin).tolist())])
+    TP = np.sum([test == 1 and pred == 1 for test, pred in zip((y_test_bin).tolist(), (predicted_bin).tolist())])
+    Precision_Negative = TN / (FN + TN)
+    Precision_Positive = TP / (FP + TP)
+    Recall_Negative = TN / (FP + TN)
+    Recall_Positive = TP / (FN + TP)
+    AUC = auc
+    AUC_PR = auc_pr
+    MCC = mcc
+    MSE_NEGATIVE = mse_negative
+    MSE_POSITIVE = mse_positive
+    MSE_AVERAGE = mse_average
+
+    # results
+
+    result_fct = pd.DataFrame({"Negative_Label": [Negative_Label],
+                               "Positive_Label": [Positive_Label],
+                               "Support_Negative": [Support_Negative],
+                               "Support_Positive": [Support_Positive],
+                               "TN": [TN],
+                               "FP": [FP],
+                               "FN": [FN],
+                               "TP": [TP],
+                               "Precision_Negative": [Precision_Negative],
+                               "Precision_Positive": [Precision_Positive],
+                               "Recall_Negative": [Recall_Negative],
+                               "Recall_Positive": [Recall_Positive],
+                               "AUC": [AUC],
+                               "AUC_PR": [AUC_PR],
+                               "MCC": [MCC],
+                               "MSE_NEGATIVE": [MSE_NEGATIVE],
+                               "MSE_POSITIVE": [MSE_POSITIVE],
+                               "MSE_AVERAGE": [MSE_AVERAGE]})
+
+    return result_fct
+
+    logger.info("Function ended: evaluate")
 
 
 def rename_fields(dtf,

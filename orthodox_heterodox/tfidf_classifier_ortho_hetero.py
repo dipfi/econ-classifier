@@ -93,7 +93,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -103,7 +103,7 @@ text_field = "text"
 label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 save = False  # False #True
-plot = 1 #0 = none, 1 = some, 2 = all
+plot = 0 #0 = none, 1 = some, 2 = all
 sentiment = False
 max_features = 1000
 ############################################

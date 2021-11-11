@@ -438,7 +438,7 @@ for max_length_of_document_vector in max_length_of_document_vector_list:
         # Feature engineer Test set
         logger.info("Feature engineer Test set")
 
-        text_lst = [text[:-50] for text in dtf_test[text_field_clean]]
+        text_lst = [text[:-50] for text in dtf_test[text_field]]
         text_lst = [' '.join(text.split()[:400]) for text in text_lst]
         #text_lst = [text for text in text_lst if text]
 
