@@ -66,7 +66,7 @@ import nltk
 import langdetect
 
 ## for bag-of-words
-from sklearn import feature_extraction, model_selection, naive_bayes, pipeline, manifold, preprocessing, feature_selection, metrics, linear_model, ensemble
+from sklearn import feature_extraction, model_selection, naive_bayes, pipeline, manifold, preprocessing, feature_selection, metrics, linear_model, ensemble, svm
 
 ## for balancing data
 from imblearn.under_sampling import RandomUnderSampler
@@ -97,7 +97,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_10000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_30000"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -126,7 +126,7 @@ tfidf = True
 max_features_list = [1000] #[1000, 5000, 10000]
 p_value_limit_list = [0.9] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,2)] #[(1,1), (1,2), (1,3)]
-
+tfidf_classifier_list = ["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
 
 #w2v only
 w2v = False
@@ -178,7 +178,10 @@ if tfidf:
     parameters_tfidf = """PARAMETERS TFIDF:
     max_features_list = """ + str(max_features_list) + """
     p_value_limit_list = """ + str(p_value_limit_list) + """
-    ngram_range_list = """ + str(ngram_range_list)
+    ngram_range_list = """ + str(ngram_range_list) + """
+    tfidf_classifier_list = """ + str(tfidf_classifier_list)
+
+
 
 if w2v:
     parameters_w2v = """PARAMETERS W2V:
@@ -474,97 +477,118 @@ for index, all_test in all_journals.iterrows():
                         # classify
                         logger.info("SET UP CLASSIFIER")
 
-                        classifier = ensemble.RandomForestClassifier(class_weight = "balanced_subsample")
+                        loop_tfidf_classifier = 0
 
-                        ## pipeline
-                        model = pipeline.Pipeline([("vectorizer_new", vectorizer_new),
-                                                   ("classifier", classifier)])
+                        for tfidf_classifier in tfidf_classifier_list:
 
-                        ## train classifier
-                        logger.info("TRAIN CLASSIFIER")
+                            loop_tfidf_classifier += 1
 
-                        y_train_new = y_train.values.ravel()
+                            logger.info("Loop tfidf_classifier Nr.: " + str(loop_tfidf_classifier))
+                            logger.info("tfidf_classifier: " + str(tfidf_classifier))
 
-                        model["classifier"].fit(X_train_new2, y_train_new)
+                            if tfidf_classifier == "naive_bayes":
+                                classifier = naive_bayes.MultinomialNB()
+                            elif tfidf_classifier == "LogisticRegression":
+                                classifier = linear_model.LogisticRegression()
+                            elif tfidf_classifier == "LogisticRegressionCV":
+                                classifier = linear_model.LogisticRegressionCV()
+                            elif tfidf_classifier == "SVC":
+                                classifier = svm.SVC(probability=True)
+                            elif tfidf_classifier == "RandomForestClassifier":
+                                classifier = ensemble.RandomForestClassifier()
+                            elif tfidf_classifier == "GradientBoostingClassifier":
+                                classifier = ensemble.GradientBoostingClassifier()
 
-                        ## encode y
-                        logger.info("encode y")
-                        dic_y_mapping = {n: label for n, label in enumerate(np.unique(y_train_new))}
-                        inverse_dic = {v: k for k, v in dic_y_mapping.items()}
-                        y_train_bin = np.array([inverse_dic[y] for y in y_train_new])
+                            ## pipeline
+                            model = pipeline.Pipeline([("vectorizer_new", vectorizer_new),
+                                                       ("classifier", classifier)])
 
+                            ## train classifier
+                            logger.info("TRAIN CLASSIFIER")
 
-                        ## test
-                        logger.info("TEST CLASSIFIER")
+                            y_train_new = y_train.values.ravel()
 
-                        X_test = dtf_test[text_field_clean].values
-                        y_test = dtf_test[label_field].values.ravel()
+                            model["classifier"].fit(X_train_new2, y_train_new)
 
-                        predicted = model.predict(X_test)
-                        predicted_prob = model.predict_proba(X_test)
-
-                        logger.info("TEST CALC")
-                        predicted_bin = np.array([np.argmax(pred) for pred in predicted_prob])
-                        logger.info("TEST CALC FINISHED")
-
-                        y_test_bin = np.array([inverse_dic[y] for y in y_test])
-                        classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
-
-                        class_time_total = time.perf_counter() - class_time_start
-                        logger.info(f"classification with {max_features} features and ngram_range {ngram_range} for {len(dtf)} samples in {class_time_total} seconds")
-
-                        # results allg
-                        now = time.asctime()
-                        result_id = "RESULT" + str(int(time.time() * 1000))
-
-                        result_all = pd.DataFrame({"time": [now],
-                                               "trainingset_id": [trainingset_id],
-                                               "result_id": [result_id],
-                                               "length_data": [len(dtf)],
-                                               "length_training_orig": [len(dtf_train)],
-                                               "length_training_samp": [len(X_train_raw_series)],
-                                               "test_journal": [test_journal],
-                                               "tfidf": [tfidf],
-                                               "w2v": [w2v],
-                                               "bert": [bert],
-                                               "duration": [class_time_total],
-                                               "current_model": [current_model]})
-
-                        # results tfidf
-                        result_tfidf = pd.DataFrame({"max_features": [max_features],
-                                                      "p_value_limit": [p_value_limit],
-                                                      "ngram_range": [ngram_range]})
-
-                        ## test
-                        y_test = dtf_test[label_field].values
+                            ## encode y
+                            logger.info("encode y")
+                            dic_y_mapping = {n: label for n, label in enumerate(np.unique(y_train_new))}
+                            inverse_dic = {v: k for k, v in dic_y_mapping.items()}
+                            y_train_bin = np.array([inverse_dic[y] for y in y_train_new])
 
 
-                        ### EVALUATION
-                        if __name__ == "__main__":
-                            result_fct = fcts.evaluate(classes=classes,
-                                                       # y_test = y_test,
-                                                       y_test_bin=y_test_bin,
-                                                       # predicted = predicted,
-                                                       predicted_bin=predicted_bin,
-                                                       predicted_prob=predicted_prob)
+                            ## test
+                            logger.info("TEST CLASSIFIER")
 
-                            result = pd.concat([result_all, result_fct, result_tfidf], axis=1)
+                            X_test = dtf_test[text_field_clean].values
+                            y_test = dtf_test[label_field].values.ravel()
 
-                            logger.info("RESULT DETAILS:")
-                            logger.info(result)
+                            predicted = model.predict(X_test)
+                            predicted_prob = model.predict_proba(X_test)
 
-                        if save_results:
-                            logger.info("SAVING RESULTS")
+                            logger.info("TEST CALC")
+                            predicted_bin = np.array([np.argmax(pred) for pred in predicted_prob])
+                            logger.info("TEST CALC FINISHED")
 
+                            y_test_bin = np.array([inverse_dic[y] for y in y_test])
+                            classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
+
+                            class_time_total = time.perf_counter() - class_time_start
+                            logger.info(f"classification with {max_features} features and ngram_range {ngram_range} for {len(dtf)} samples in {class_time_total} seconds")
+
+                            # results allg
+                            now = time.asctime()
+                            result_id = "RESULT" + str(int(time.time() * 1000))
+
+                            result_all = pd.DataFrame({"time": [now],
+                                                   "trainingset_id": [trainingset_id],
+                                                   "result_id": [result_id],
+                                                   "length_data": [len(dtf)],
+                                                   "length_training_orig": [len(dtf_train)],
+                                                   "length_training_samp": [len(X_train_raw_series)],
+                                                   "test_journal": [test_journal],
+                                                   "tfidf": [tfidf],
+                                                   "w2v": [w2v],
+                                                   "bert": [bert],
+                                                   "duration": [class_time_total],
+                                                   "current_model": [current_model]})
+
+                            # results tfidf
+                            result_tfidf = pd.DataFrame({"max_features": [max_features],
+                                                         "p_value_limit": [p_value_limit],
+                                                         "ngram_range": [ngram_range],
+                                                         "tfidf_classifier": [tfidf_classifier]})
+
+                            ## test
+                            y_test = dtf_test[label_field].values
+
+
+                            ### EVALUATION
                             if __name__ == "__main__":
-                                results, pred_prob_df = fcts.save_results(data_path=data_path,
-                                                                          results_file_name=results_file_name,
-                                                                          result=result,
-                                                                          dtf_test=dtf_test,
-                                                                          trainingset_id=trainingset_id,
-                                                                          result_id=result_id,
-                                                                          predicted_prob=predicted_prob,
-                                                                          y_test_bin=y_test_bin)
+                                result_fct = fcts.evaluate(classes=classes,
+                                                           # y_test = y_test,
+                                                           y_test_bin=y_test_bin,
+                                                           # predicted = predicted,
+                                                           predicted_bin=predicted_bin,
+                                                           predicted_prob=predicted_prob)
+
+                                result = pd.concat([result_all, result_fct, result_tfidf], axis=1)
+
+                                logger.info("RESULT DETAILS:")
+                                logger.info(result)
+
+                            if save_results:
+                                logger.info("SAVING RESULTS")
+
+                                if __name__ == "__main__":
+                                    results, pred_prob_df = fcts.save_results(data_path=data_path,
+                                                                              results_file_name=results_file_name,
+                                                                              result=result,
+                                                                              dtf_test=dtf_test,
+                                                                              trainingset_id=trainingset_id,
+                                                                              result_id=result_id,
+                                                                              predicted_prob=predicted_prob,
+                                                                              y_test_bin=y_test_bin)
 
 
 
