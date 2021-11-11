@@ -97,7 +97,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -117,44 +117,44 @@ random_journals = False
 journal_list = [65,1]
 
 test_size = 0.1 #suggestion: 0.1
-training_set = "undersample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
+training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
-results_file_name = "results_test_new"
+results_file_name = "results_test_w2v"
 
 #TFIDF only
-tfidf = True
-max_features_list = [10000] #[1000, 5000, 10000]
-p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
-ngram_range_list = [(1,2)] #[(1,1), (1,2), (1,3)]
-tfidf_classifier_list = ["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "RandomForestClassifier","GradientBoostingClassifier"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
+tfidf = False
+max_features_list = [1000, 10000, 30000] #[1000, 5000, 10000]
+p_value_limit_list = [0.95, 0.9, 0.7] #[0.8, 0.9, 0.95]
+ngram_range_list = [(1,1), (1,3)] #[(1,1), (1,2), (1,3)]
+tfidf_classifier_list = ["naive_bayes", "LogisticRegression", "GradientBoostingClassifier", "LogisticRegressionCV", "RandomForestClassifier", "SVC"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
 
 #w2v only
 w2v = False
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = True #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
-embedding_folder = "embeddings_new"
-train_new = True #if True new embeddings are trained
+embedding_folder = "embeddings"
+train_new = False #if True new embeddings are trained
 
-num_epochs_for_embedding_list = [5] #number of epochs to train the word embeddings ; sugegstion: 15 (embedding_set = "False")
-num_epochs_for_classification_list= [5] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
-embedding_vector_length_list = [300] #suggesion: 300
+num_epochs_for_embedding_list = [10,15,20] #number of epochs to train the word embeddings ; sugegstion: 15 (embedding_set = "False")
+num_epochs_for_classification_list= [5,10,15] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
+embedding_vector_length_list = [50,150,300] #suggesion: 300
 
-window_size_list = [8] #suggesion: 8
+window_size_list = [4,8,12] #suggesion: 8
 
 embedding_only = False
 embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False ; suggestion: False
 
 max_length_of_document_vector_w2v_list = [100] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 100
 classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
-w2v_batch_size_list = [256] #suggestion: 256
+w2v_batch_size_list = [256, 128] #suggestion: 256
 
 #BERT only
-bert = False
-small_model = True
+bert = True
+small_model_list = [True, False]
 bert_batch_size_list = [128]
-bert_epochs_list = [1]
-max_length_of_document_vector_bert_list = [350] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
+bert_epochs_list = [3, 6, 12]
+max_length_of_document_vector_bert_list = [50] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
 classifier_loss_function_bert_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
 
 ############################################
@@ -203,7 +203,7 @@ if bert:
     parameters_bert = """PARAMETERS BERT:
     max_length_of_document_vector_bert_list = """ + str(max_length_of_document_vector_bert_list) + """
     classifier_loss_function_bert_list = """ + str(classifier_loss_function_bert_list) + """
-    small_model = """ + str(small_model) + """
+    small_model_list = """ + str(small_model_list) + """
     bert_batch_size_list = """ + str(bert_batch_size_list) + """
     bert_epochs_list = """ + str(bert_epochs_list)
 
@@ -989,190 +989,59 @@ for index, all_test in all_journals.iterrows():
 
         if current_model == "bert":
 
-            if small_model:
-                tokenizer = transformers.AutoTokenizer.from_pretrained('distilbert-base-uncased', do_lower_case=True)
-            else:
-                tokenizer = transformers.AutoTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+            small_model_loop = 0
 
-            max_length_of_document_vector_bert_loop = 0
+            for small_model in small_model_list:
 
-            for max_length_of_document_vector_bert in max_length_of_document_vector_bert_list:
-
-                max_length_of_document_vector_bert_loop += 1
-
-                logger.info("max_length_of_document_vector_bert_loop Nr: " + str(max_length_of_document_vector_bert_loop))
-                logger.info("max_length_of_document_vector_bert : " + str(max_length_of_document_vector_bert))
-
-                text_lst = [text[:-50] for text in X_train_raw["X"]]
-                text_lst = [' '.join(text.split()[:max_length_of_document_vector_bert]) for text in text_lst]
-
-                subtitles = ["design", "methodology", "approach", "originality", "value", "limitations", "implications"]
-
-                text_lst = [word for word in text_lst if word not in subtitles]
-
-                # text_lst = [text for text in text_lst if text]
-
-                corpus = text_lst
-
-                ## Fearute engineering train set
-                logger.info("Fearute engineering train set")
-
-                ## add special tokens
-                logger.info("add special tokens")
-
-                maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
-                corpus_tokenized = ["[CLS] " +
-                                    " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
-                                    " [SEP] " for txt in corpus]
-
-                ## generate masks
-                logger.info("generate masks")
-                masks = [[1] * len(txt.split(" ")) + [0] * (max_length_of_document_vector_bert - len(txt.split(" "))) for txt in corpus_tokenized]
-
-                ## padding
-                logger.info("padding")
-                txt2seq = [txt + " [PAD]" * (max_length_of_document_vector_bert - len(txt.split(" "))) if len(txt.split(" ")) != max_length_of_document_vector_bert else txt for txt in corpus_tokenized]
-
-                ## generate idx
-                logger.info("generate idx")
-                idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
-                minlen = min([len(i) for i in idx])
-                idx = [i[:max_length_of_document_vector_bert] for i in idx]
-
-
-
-                ## feature matrix
-                logger.info("feature matrix")
+                small_model_loop += 1
 
                 if small_model:
-                    X_train_new = [np.asarray(idx, dtype='int32'), np.asarray(masks, dtype='int32')]
-
+                    tokenizer = transformers.AutoTokenizer.from_pretrained('distilbert-base-uncased', do_lower_case=True)
                 else:
+                    tokenizer = transformers.AutoTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
-                    ## generate segments
-                    logger.info("generate segments")
-                    segments = []
-                    for seq in txt2seq:
-                        temp, i = [], 0
-                        for token in seq.split(" "):
-                            temp.append(i)
-                            if token == "[SEP]":
-                                i += 1
-                        segments.append(temp)
+                max_length_of_document_vector_bert_loop = 0
 
-                    X_train_new = [np.asarray(idx, dtype='int32'), np.asarray(masks, dtype='int32'), np.asarray(segments, dtype='int32')]
+                for max_length_of_document_vector_bert in max_length_of_document_vector_bert_list:
 
+                    max_length_of_document_vector_bert_loop += 1
+                    logger.info("Loop small_model Nr: " + str(small_model_loop))
+                    logger.info("small_model : " + str(small_model))
+                    logger.info("Loop max_length_of_document_vector_bert Nr: " + str(max_length_of_document_vector_bert_loop))
+                    logger.info("max_length_of_document_vector_bert : " + str(max_length_of_document_vector_bert))
 
+                    text_lst = [text[:-50] for text in X_train_raw["X"]]
+                    text_lst = [' '.join(text.split()[:max_length_of_document_vector_bert]) for text in text_lst]
 
+                    subtitles = ["design", "methodology", "approach", "originality", "value", "limitations", "implications"]
 
+                    text_lst = [word for word in text_lst if word not in subtitles]
 
-                ##CLASSIFIER
-                logger.info("CLASSIFIER")
-
-                classifier_loss_function_bert_loop = 0
-
-                for classifier_loss_function_bert in classifier_loss_function_bert_list:
-                    classifier_loss_function_bert_loop += 1
-                    logger.info("classifier_loss_function_bert_loop Nr = " + str(classifier_loss_function_bert_loop))
-                    logger.info("classifier_loss_function_bert = " + str(classifier_loss_function_bert))
-
-                    if small_model:
-
-                        ##DISTIL-BERT
-                        logger.info("DISTIL-BERT")
-
-                        ## inputs
-                        idx = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_idx")
-                        masks = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_masks")
-                        # segments = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_segments")
-
-                        ## pre-trained bert with config
-                        config = transformers.DistilBertConfig(dropout=0.2, attention_dropout=0.2)
-                        config.output_hidden_states = False
-
-                        nlp = transformers.TFDistilBertModel.from_pretrained('distilbert-base-uncased', config=config)
-                        bert_out = nlp(idx, attention_mask=masks)[0]
-
-                        ## fine-tuning
-                        x = layers.GlobalAveragePooling1D()(bert_out)
-                        x = layers.Dense(64, activation="relu")(x)
-                        y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
-
-                        ## compile
-                        logger.info("compile DISTIL-BERT")
-                        model = models.Model([idx, masks], y_out)
-
-                        for layer in model.layers[:3]:
-                            layer.trainable = False
-
-                        model.compile(loss=classifier_loss_function_bert, optimizer='adam', metrics=['mse'])
-
-                        model.summary()
-
-                    else:
-                        ##BERT
-                        logger.info("BERT")
-
-                        ## inputs
-                        idx = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_idx")
-                        masks = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_masks")
-                        segments = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_segments")
-
-                        ## pre-trained bert
-                        nlp = transformers.TFBertModel.from_pretrained("bert-base-uncased")
-                        bert_out = nlp([idx, masks, segments])
-
-                        sequence_out = bert_out.last_hidden_state
-                        pooled_out = bert_out.pooler_output
-
-                        ## fine-tuning
-                        x = layers.GlobalAveragePooling1D() (sequence_out)
-                        x = layers.Dense(64, activation="relu")(x)
-                        y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
-
-                        ## compile
-                        logger.info("compile BERT")
-                        model = models.Model([idx, masks, segments], y_out)
-
-                        for layer in model.layers[:4]:
-                            layer.trainable = False
-
-                        model.compile(loss = classifier_loss_function_bert, optimizer='adam', metrics=['mse'])
-
-                        model.summary()
-
-
-
-
-
-
-
-                    # Feature engineer Test set
-                    logger.info("Feature engineer Test set")
-
-                    text_lst = [text[:-50] for text in dtf_test[text_field]]
-                    text_lst = [' '.join(text.split()[:maxqnans]) for text in text_lst]
-                    #text_lst = [text for text in text_lst if text]
+                    # text_lst = [text for text in text_lst if text]
 
                     corpus = text_lst
 
+                    ## Fearute engineering train set
+                    logger.info("Fearute engineering train set")
+
                     ## add special tokens
-                    logger.info("add special tokens test")
+                    logger.info("add special tokens")
+
                     maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
                     corpus_tokenized = ["[CLS] " +
                                         " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
                                         " [SEP] " for txt in corpus]
 
                     ## generate masks
-                    logger.info("generate masks test")
+                    logger.info("generate masks")
                     masks = [[1] * len(txt.split(" ")) + [0] * (max_length_of_document_vector_bert - len(txt.split(" "))) for txt in corpus_tokenized]
 
                     ## padding
-                    logger.info("padding test")
+                    logger.info("padding")
                     txt2seq = [txt + " [PAD]" * (max_length_of_document_vector_bert - len(txt.split(" "))) if len(txt.split(" ")) != max_length_of_document_vector_bert else txt for txt in corpus_tokenized]
 
                     ## generate idx
-                    logger.info("generate idx test")
+                    logger.info("generate idx")
                     idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
                     minlen = min([len(i) for i in idx])
                     idx = [i[:max_length_of_document_vector_bert] for i in idx]
@@ -1180,12 +1049,13 @@ for index, all_test in all_journals.iterrows():
 
 
                     ## feature matrix
-                    logger.info("feature matrix test")
+                    logger.info("feature matrix")
 
                     if small_model:
-                        X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32')]
+                        X_train_new = [np.asarray(idx, dtype='int32'), np.asarray(masks, dtype='int32')]
 
                     else:
+
                         ## generate segments
                         logger.info("generate segments")
                         segments = []
@@ -1197,110 +1067,247 @@ for index, all_test in all_journals.iterrows():
                                     i += 1
                             segments.append(temp)
 
-                        X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32'), np.array(segments, dtype='int32')]
+                        X_train_new = [np.asarray(idx, dtype='int32'), np.asarray(masks, dtype='int32'), np.asarray(segments, dtype='int32')]
 
 
 
 
 
-                    ## encode y
-                    logger.info("encode y")
-                    dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
-                    inverse_dic = {v:k for k,v in dic_y_mapping.items()}
-                    y_train_bin = np.array([inverse_dic[y] for y in y_train["y"]])
+                    ##CLASSIFIER
+                    logger.info("CLASSIFIER")
 
-                    bert_batch_size_loop = 0
+                    classifier_loss_function_bert_loop = 0
 
-                    for bert_batch_size in bert_batch_size_list:
+                    for classifier_loss_function_bert in classifier_loss_function_bert_list:
+                        classifier_loss_function_bert_loop += 1
+                        logger.info("classifier_loss_function_bert_loop Nr = " + str(classifier_loss_function_bert_loop))
+                        logger.info("classifier_loss_function_bert = " + str(classifier_loss_function_bert))
 
-                        bert_batch_size_loop += 1
+                        if small_model:
 
-                        bert_epochs_loop = 0
+                            ##DISTIL-BERT
+                            logger.info("DISTIL-BERT")
 
-                        for bert_epochs in bert_epochs_list:
+                            ## inputs
+                            idx = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_idx")
+                            masks = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_masks")
+                            # segments = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_segments")
 
-                            class_time_start = time.perf_counter()
+                            ## pre-trained bert with config
+                            config = transformers.DistilBertConfig(dropout=0.2, attention_dropout=0.2)
+                            config.output_hidden_states = False
 
-                            bert_epochs_loop += 1
+                            nlp = transformers.TFDistilBertModel.from_pretrained('distilbert-base-uncased', config=config)
+                            bert_out = nlp(idx, attention_mask=masks)[0]
 
-                            logger.info("max_length_of_document_vector_bert_loop Nr: " + str(max_length_of_document_vector_bert_loop))
-                            logger.info("max_length_of_document_vector_bert : " + str(max_length_of_document_vector_bert))
-                            logger.info("bert_batch_size Nr: " + str(bert_batch_size_loop))
-                            logger.info("bert_batch_size : " + str(bert_batch_size))
-                            logger.info("bert_epochs_loop Nr: " + str(bert_epochs_loop))
-                            logger.info("bert_epochs : " + str(bert_epochs))
+                            ## fine-tuning
+                            x = layers.GlobalAveragePooling1D()(bert_out)
+                            x = layers.Dense(64, activation="relu")(x)
+                            y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
 
-                            ## train
-                            training = model.fit(x=X_train_new, y=y_train_bin, batch_size=bert_batch_size, epochs=bert_epochs, shuffle=True, verbose=1, validation_split=0.3)
+                            ## compile
+                            logger.info("compile DISTIL-BERT")
+                            model = models.Model([idx, masks], y_out)
 
-                            class_time_total = time.perf_counter() - class_time_start
-                            logger.info(f"classification with {bert_epochs} epochs batch size {bert_batch_size} for {len(dtf)} samples in {class_time_total} seconds")
+                            for layer in model.layers[:3]:
+                                layer.trainable = False
 
+                            model.compile(loss=classifier_loss_function_bert, optimizer='adam', metrics=['mse'])
 
+                            model.summary()
 
-                            #results allg
-                            now = time.asctime()
-                            result_id = "RESULT" + str(int(time.time() * 1000))
+                        else:
+                            ##BERT
+                            logger.info("BERT")
 
-                            result_all = pd.DataFrame({"time": [now],
-                                                   "trainingset_id": [trainingset_id],
-                                                   "result_id": [result_id],
-                                                   "length_data": [len(dtf)],
-                                                   "length_training_orig": [len(dtf_train)],
-                                                   "length_training_samp": [len(X_train_raw_series)],
-                                                   "test_journal": [test_journal],
-                                                   "tfidf": [tfidf],
-                                                   "w2v": [w2v],
-                                                   "bert": [bert],
-                                                   "duration":[class_time_total],
-                                                   "current_model": [current_model]})
+                            ## inputs
+                            idx = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_idx")
+                            masks = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_masks")
+                            segments = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_segments")
 
+                            ## pre-trained bert
+                            nlp = transformers.TFBertModel.from_pretrained("bert-base-uncased")
+                            bert_out = nlp([idx, masks, segments])
 
-                            # results bert
-                            result_bert = pd.DataFrame({"max_length_of_document_vector_bert": [max_length_of_document_vector_bert],
-                                                      "classifier_loss_function_bert": [classifier_loss_function_bert],
-                                                      "small_model": [small_model],
-                                                      "bert_batch_size": [bert_batch_size],
-                                                      "bert_epochs": [bert_epochs]})
+                            sequence_out = bert_out.last_hidden_state
+                            pooled_out = bert_out.pooler_output
 
+                            ## fine-tuning
+                            x = layers.GlobalAveragePooling1D() (sequence_out)
+                            x = layers.Dense(64, activation="relu")(x)
+                            y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
 
-                            ## test
-                            predicted_prob = model.predict(X_test)
-                            predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
-                            y_test = dtf_test[label_field].values
-                            predicted_bin = np.array([np.argmax(pred) for pred in predicted_prob])
-                            y_test_bin = np.array([inverse_dic[y] for y in y_test])
-                            classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
+                            ## compile
+                            logger.info("compile BERT")
+                            model = models.Model([idx, masks, segments], y_out)
 
+                            for layer in model.layers[:4]:
+                                layer.trainable = False
 
+                            model.compile(loss = classifier_loss_function_bert, optimizer='adam', metrics=['mse'])
+
+                            model.summary()
 
 
-                            ### EVALUATION
-                            if __name__ == "__main__":
-                                result_fct = fcts.evaluate(classes = classes,
-                                                             #y_test = y_test,
-                                                             y_test_bin = y_test_bin,
-                                                             #predicted = predicted,
-                                                             predicted_bin = predicted_bin,
-                                                             predicted_prob = predicted_prob)
 
-                                result = pd.concat([result_all, result_fct, result_bert], axis = 1)
 
-                                logger.info("RESULT DETAILS:")
-                                logger.info(result)
 
-                            if save_results:
-                                logger.info("SAVING RESULTS")
 
+
+                        # Feature engineer Test set
+                        logger.info("Feature engineer Test set")
+
+                        text_lst = [text[:-50] for text in dtf_test[text_field]]
+                        text_lst = [' '.join(text.split()[:maxqnans]) for text in text_lst]
+                        #text_lst = [text for text in text_lst if text]
+
+                        corpus = text_lst
+
+                        ## add special tokens
+                        logger.info("add special tokens test")
+                        maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
+                        corpus_tokenized = ["[CLS] " +
+                                            " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
+                                            " [SEP] " for txt in corpus]
+
+                        ## generate masks
+                        logger.info("generate masks test")
+                        masks = [[1] * len(txt.split(" ")) + [0] * (max_length_of_document_vector_bert - len(txt.split(" "))) for txt in corpus_tokenized]
+
+                        ## padding
+                        logger.info("padding test")
+                        txt2seq = [txt + " [PAD]" * (max_length_of_document_vector_bert - len(txt.split(" "))) if len(txt.split(" ")) != max_length_of_document_vector_bert else txt for txt in corpus_tokenized]
+
+                        ## generate idx
+                        logger.info("generate idx test")
+                        idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
+                        minlen = min([len(i) for i in idx])
+                        idx = [i[:max_length_of_document_vector_bert] for i in idx]
+
+
+
+                        ## feature matrix
+                        logger.info("feature matrix test")
+
+                        if small_model:
+                            X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32')]
+
+                        else:
+                            ## generate segments
+                            logger.info("generate segments")
+                            segments = []
+                            for seq in txt2seq:
+                                temp, i = [], 0
+                                for token in seq.split(" "):
+                                    temp.append(i)
+                                    if token == "[SEP]":
+                                        i += 1
+                                segments.append(temp)
+
+                            X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32'), np.array(segments, dtype='int32')]
+
+
+
+
+
+                        ## encode y
+                        logger.info("encode y")
+                        dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
+                        inverse_dic = {v:k for k,v in dic_y_mapping.items()}
+                        y_train_bin = np.array([inverse_dic[y] for y in y_train["y"]])
+
+                        bert_batch_size_loop = 0
+
+                        for bert_batch_size in bert_batch_size_list:
+
+                            bert_batch_size_loop += 1
+
+                            bert_epochs_loop = 0
+
+                            for bert_epochs in bert_epochs_list:
+
+                                class_time_start = time.perf_counter()
+
+                                bert_epochs_loop += 1
+
+                                logger.info("max_length_of_document_vector_bert_loop Nr: " + str(max_length_of_document_vector_bert_loop))
+                                logger.info("max_length_of_document_vector_bert : " + str(max_length_of_document_vector_bert))
+                                logger.info("bert_batch_size Nr: " + str(bert_batch_size_loop))
+                                logger.info("bert_batch_size : " + str(bert_batch_size))
+                                logger.info("bert_epochs_loop Nr: " + str(bert_epochs_loop))
+                                logger.info("bert_epochs : " + str(bert_epochs))
+
+                                ## train
+                                training = model.fit(x=X_train_new, y=y_train_bin, batch_size=bert_batch_size, epochs=bert_epochs, shuffle=True, verbose=1, validation_split=0.3)
+
+                                class_time_total = time.perf_counter() - class_time_start
+                                logger.info(f"classification with {bert_epochs} epochs batch size {bert_batch_size} for {len(dtf)} samples in {class_time_total} seconds")
+
+
+
+                                #results allg
+                                now = time.asctime()
+                                result_id = "RESULT" + str(int(time.time() * 1000))
+
+                                result_all = pd.DataFrame({"time": [now],
+                                                       "trainingset_id": [trainingset_id],
+                                                       "result_id": [result_id],
+                                                       "length_data": [len(dtf)],
+                                                       "length_training_orig": [len(dtf_train)],
+                                                       "length_training_samp": [len(X_train_raw_series)],
+                                                       "test_journal": [test_journal],
+                                                       "tfidf": [tfidf],
+                                                       "w2v": [w2v],
+                                                       "bert": [bert],
+                                                       "duration":[class_time_total],
+                                                       "current_model": [current_model]})
+
+
+                                # results bert
+                                result_bert = pd.DataFrame({"max_length_of_document_vector_bert": [max_length_of_document_vector_bert],
+                                                          "classifier_loss_function_bert": [classifier_loss_function_bert],
+                                                          "small_model": [small_model],
+                                                          "bert_batch_size": [bert_batch_size],
+                                                          "bert_epochs": [bert_epochs]})
+
+
+                                ## test
+                                predicted_prob = model.predict(X_test)
+                                predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
+                                y_test = dtf_test[label_field].values
+                                predicted_bin = np.array([np.argmax(pred) for pred in predicted_prob])
+                                y_test_bin = np.array([inverse_dic[y] for y in y_test])
+                                classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
+
+
+
+
+                                ### EVALUATION
                                 if __name__ == "__main__":
-                                    results, pred_prob_df = fcts.save_results(data_path=data_path,
-                                                                             results_file_name=results_file_name,
-                                                                             result=result,
-                                                                             dtf_test=dtf_test,
-                                                                             trainingset_id=trainingset_id,
-                                                                             result_id=result_id,
-                                                                             predicted_prob=predicted_prob,
-                                                                             y_test_bin=y_test_bin)
+                                    result_fct = fcts.evaluate(classes = classes,
+                                                                 #y_test = y_test,
+                                                                 y_test_bin = y_test_bin,
+                                                                 #predicted = predicted,
+                                                                 predicted_bin = predicted_bin,
+                                                                 predicted_prob = predicted_prob)
+
+                                    result = pd.concat([result_all, result_fct, result_bert], axis = 1)
+
+                                    logger.info("RESULT DETAILS:")
+                                    logger.info(result)
+
+                                if save_results:
+                                    logger.info("SAVING RESULTS")
+
+                                    if __name__ == "__main__":
+                                        results, pred_prob_df = fcts.save_results(data_path=data_path,
+                                                                                 results_file_name=results_file_name,
+                                                                                 result=result,
+                                                                                 dtf_test=dtf_test,
+                                                                                 trainingset_id=trainingset_id,
+                                                                                 result_id=result_id,
+                                                                                 predicted_prob=predicted_prob,
+                                                                                 y_test_bin=y_test_bin)
 
 
 
