@@ -430,7 +430,6 @@ for index, all_test in all_journals.iterrows():
                         logger.info("Loop p_value_limit Nr: " + str(loop_p_value_limit))
                         logger.info("Loop p_value_limit: " + str(p_value_limit))
 
-                        class_time_start = time.perf_counter()
                         vectorizer = feature_extraction.text.TfidfVectorizer(max_features=max_features, ngram_range=ngram_range)
 
                         corpus = X_train["X"]
@@ -486,12 +485,14 @@ for index, all_test in all_journals.iterrows():
                             logger.info("Loop tfidf_classifier Nr.: " + str(loop_tfidf_classifier))
                             logger.info("tfidf_classifier: " + str(tfidf_classifier))
 
+                            class_time_start = time.perf_counter()
+
                             if tfidf_classifier == "naive_bayes":
                                 classifier = naive_bayes.MultinomialNB()
                             elif tfidf_classifier == "LogisticRegression":
                                 classifier = linear_model.LogisticRegression()
                             elif tfidf_classifier == "LogisticRegressionCV":
-                                classifier = linear_model.LogisticRegressionCV()
+                                classifier = linear_model.LogisticRegressionCV(max_iter = 300)
                             elif tfidf_classifier == "SVC":
                                 classifier = svm.SVC(probability=True)
                             elif tfidf_classifier == "RandomForestClassifier":
@@ -557,7 +558,8 @@ for index, all_test in all_journals.iterrows():
                             result_tfidf = pd.DataFrame({"max_features": [max_features],
                                                          "p_value_limit": [p_value_limit],
                                                          "ngram_range": [ngram_range],
-                                                         "tfidf_classifier": [tfidf_classifier]})
+                                                         "tfidf_classifier": [tfidf_classifier],
+                                                         "number_relevant_features": [len(X_names_new)]})
 
                             ## test
                             y_test = dtf_test[label_field].values
