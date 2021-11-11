@@ -97,7 +97,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_30000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -123,10 +123,10 @@ results_file_name = "results_test_new"
 
 #TFIDF only
 tfidf = True
-max_features_list = [1000] #[1000, 5000, 10000]
-p_value_limit_list = [0.9] #[0.8, 0.9, 0.95]
+max_features_list = [10000] #[1000, 5000, 10000]
+p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,2)] #[(1,1), (1,2), (1,3)]
-tfidf_classifier_list = ["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
+tfidf_classifier_list = ["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "RandomForestClassifier","GradientBoostingClassifier"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
 
 #w2v only
 w2v = False
@@ -343,7 +343,6 @@ for index, all_test in all_journals.iterrows():
     logger.info("BALANCE TRAINING SET")
 
 
-
     if training_set == "oversample":
         over_sampler = RandomOverSampler(random_state=42)
         X_train, y_train = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field]}), pd.DataFrame({"y": dtf_train[label_field]}))
@@ -410,95 +409,95 @@ for index, all_test in all_journals.iterrows():
             #TFIDF
             logger.info("TFIDF")
 
-            loop_max_features = 0
-            for max_features in max_features_list:
+            loop_tfidf_classifier = 0
 
-                loop_max_features += 1
-                loop_ngram_range = 0
+            for tfidf_classifier in tfidf_classifier_list:
 
-                for ngram_range in ngram_range_list:
+                loop_tfidf_classifier += 1
 
-                    loop_ngram_range += 1
-                    loop_p_value_limit = 0
+                if tfidf_classifier == "naive_bayes":
+                    classifier = naive_bayes.MultinomialNB()
+                elif tfidf_classifier == "LogisticRegression":
+                    classifier = linear_model.LogisticRegression()
+                elif tfidf_classifier == "LogisticRegressionCV":
+                    classifier = linear_model.LogisticRegressionCV(max_iter=300)
+                elif tfidf_classifier == "SVC":
+                    classifier = svm.SVC(probability=True)
+                elif tfidf_classifier == "RandomForestClassifier":
+                    classifier = ensemble.RandomForestClassifier()
+                elif tfidf_classifier == "GradientBoostingClassifier":
+                    classifier = ensemble.GradientBoostingClassifier()
 
-                    for p_value_limit in p_value_limit_list:
-                        loop_p_value_limit += 1
-                        logger.info("Loop max_features Nr: " + str(loop_max_features))
-                        logger.info("Loop max_features: " + str(max_features))
-                        logger.info("Loop ngram_range Nr: " + str(loop_ngram_range))
-                        logger.info("Loop ngram_range: " + str(ngram_range))
-                        logger.info("Loop p_value_limit Nr: " + str(loop_p_value_limit))
-                        logger.info("Loop p_value_limit: " + str(p_value_limit))
+                loop_max_features = 0
+                for max_features in max_features_list:
 
-                        vectorizer = feature_extraction.text.TfidfVectorizer(max_features=max_features, ngram_range=ngram_range)
+                    loop_max_features += 1
+                    loop_ngram_range = 0
 
-                        corpus = X_train["X"]
+                    for ngram_range in ngram_range_list:
 
-                        vectorizer.fit(corpus)
-                        X_train_new = vectorizer.transform(corpus)
-                        dic_vocabulary = vectorizer.vocabulary_
+                        loop_ngram_range += 1
+                        loop_p_value_limit = 0
 
-                        if plot == 2:
-                            sns.heatmap(X_train_new.todense()[:, np.random.randint(0, X_train_new.shape[1], 100)] == 0, vmin=0, vmax=1, cbar=False).set_title('Sparse Matrix Sample')
-
-                        # FEATURE SELECTION
-                        logger.info("FEATURE SELECTION")
-                        y = y_train
-                        X_names = vectorizer.get_feature_names()
-
-
-
-
-                        dtf_features = pd.DataFrame()
-                        for cat in np.unique(y):
-                            logger.info("cat: " + str(cat))
-                            chi2, p = feature_selection.chi2(X_train_new, y == cat)
-                            dtf_features = dtf_features.append(pd.DataFrame({"feature": X_names, "score": 1 - p, "y": cat}))
-                            dtf_features = dtf_features.sort_values([label_field, "score"], ascending=[True, False])
-                            dtf_features = dtf_features[dtf_features["score"] > p_value_limit]
-
-                        X_names_new = dtf_features["feature"].unique().tolist()
-
-                        # shorter
-                        logger.info("SHORTENING VOCABULARY")
-
-                        if len(X_names_new) > 0:
-                            vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names_new)
-                        else:
-                            vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names)
-                            p_value_limit = "no limit"
-
-
-                        vectorizer_new.fit(corpus)
-                        X_train_new2 = vectorizer_new.transform(corpus)
-                        dic_vocabulary = vectorizer_new.vocabulary_
-
-                        # classify
-                        logger.info("SET UP CLASSIFIER")
-
-                        loop_tfidf_classifier = 0
-
-                        for tfidf_classifier in tfidf_classifier_list:
-
-                            loop_tfidf_classifier += 1
+                        for p_value_limit in p_value_limit_list:
+                            loop_p_value_limit += 1
 
                             logger.info("Loop tfidf_classifier Nr.: " + str(loop_tfidf_classifier))
                             logger.info("tfidf_classifier: " + str(tfidf_classifier))
+                            logger.info("Loop max_features Nr: " + str(loop_max_features))
+                            logger.info("Loop max_features: " + str(max_features))
+                            logger.info("Loop ngram_range Nr: " + str(loop_ngram_range))
+                            logger.info("Loop ngram_range: " + str(ngram_range))
+                            logger.info("Loop p_value_limit Nr: " + str(loop_p_value_limit))
+                            logger.info("Loop p_value_limit: " + str(p_value_limit))
 
                             class_time_start = time.perf_counter()
 
-                            if tfidf_classifier == "naive_bayes":
-                                classifier = naive_bayes.MultinomialNB()
-                            elif tfidf_classifier == "LogisticRegression":
-                                classifier = linear_model.LogisticRegression()
-                            elif tfidf_classifier == "LogisticRegressionCV":
-                                classifier = linear_model.LogisticRegressionCV(max_iter = 300)
-                            elif tfidf_classifier == "SVC":
-                                classifier = svm.SVC(probability=True)
-                            elif tfidf_classifier == "RandomForestClassifier":
-                                classifier = ensemble.RandomForestClassifier()
-                            elif tfidf_classifier == "GradientBoostingClassifier":
-                                classifier = ensemble.GradientBoostingClassifier()
+                            vectorizer = feature_extraction.text.TfidfVectorizer(max_features=max_features, ngram_range=ngram_range)
+
+                            corpus = X_train["X"]
+
+                            vectorizer.fit(corpus)
+                            X_train_new = vectorizer.transform(corpus)
+                            dic_vocabulary = vectorizer.vocabulary_
+
+                            if plot == 2:
+                                sns.heatmap(X_train_new.todense()[:, np.random.randint(0, X_train_new.shape[1], 100)] == 0, vmin=0, vmax=1, cbar=False).set_title('Sparse Matrix Sample')
+
+                            # FEATURE SELECTION
+                            logger.info("FEATURE SELECTION")
+                            y = y_train
+                            X_names = vectorizer.get_feature_names()
+
+
+
+
+                            dtf_features = pd.DataFrame()
+                            for cat in np.unique(y):
+                                logger.info("cat: " + str(cat))
+                                chi2, p = feature_selection.chi2(X_train_new, y == cat)
+                                dtf_features = dtf_features.append(pd.DataFrame({"feature": X_names, "score": 1 - p, "y": cat}))
+                                dtf_features = dtf_features.sort_values([label_field, "score"], ascending=[True, False])
+                                dtf_features = dtf_features[dtf_features["score"] > p_value_limit]
+
+                            X_names_new = dtf_features["feature"].unique().tolist()
+
+                            # shorter
+                            logger.info("SHORTENING VOCABULARY")
+
+                            if len(X_names_new) > 0:
+                                vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names_new)
+                            else:
+                                vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names)
+                                p_value_limit = "no limit"
+
+
+                            vectorizer_new.fit(corpus)
+                            X_train_new2 = vectorizer_new.transform(corpus)
+                            dic_vocabulary = vectorizer_new.vocabulary_
+
+                            # classify
+                            logger.info("SET UP CLASSIFIER")
 
                             ## pipeline
                             model = pipeline.Pipeline([("vectorizer_new", vectorizer_new),
