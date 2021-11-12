@@ -122,7 +122,7 @@ journal_list = [65,1]
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
-results_file_name = "results_test_tfidf_short"
+results_file_name = "results_final"
 
 #TFIDF only
 tfidf = False
@@ -154,9 +154,9 @@ w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
 bert = True
-small_model_list = [False]
-bert_batch_size_list = [128]
-bert_epochs_list = [3, 6]
+small_model_list = [True]
+bert_batch_size_list = [254]
+bert_epochs_list = [3, 6, 12]
 max_length_of_document_vector_bert_list = [500] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
 classifier_loss_function_bert_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
 

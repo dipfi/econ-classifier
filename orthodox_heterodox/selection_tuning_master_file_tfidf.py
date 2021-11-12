@@ -122,10 +122,10 @@ journal_list = [65,1]
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
-results_file_name = "results_test_tfidf_short"
+results_file_name = "results_final"
 
 #TFIDF only
-tfidf = False
+tfidf = True
 max_features_list = [1000, 10000] #[1000, 5000, 10000]
 p_value_limit_list = [0.7, 0.8, 0.9] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1), (1,3)] #[(1,1), (1,2), (1,3)]
@@ -133,14 +133,14 @@ tfidf_classifier_list = ["LogisticRegression", "LogisticRegressionCV", "naive_ba
 
 #w2v only
 w2v = False
-use_gigaword = True #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
-use_embeddings = False #if True a trained model needs to be selected below
+use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
+use_embeddings = True #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
 train_new = False #if True new embeddings are trained
 
 num_epochs_for_embedding_list = [10] #number of epochs to train the word embeddings ; sugegstion: 15 (embedding_set = "False")
-num_epochs_for_classification_list= [5] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
+num_epochs_for_classification_list= [10] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
 embedding_vector_length_list = [300] #suggesion: 300
 
 window_size_list = [8] #suggesion: 8
@@ -150,13 +150,13 @@ embedding_set = False # "oversample", "undersample", "heterodox", "samequality",
 
 max_length_of_document_vector_w2v_list = [100] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 100
 classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
-w2v_batch_size_list = [256] #suggestion: 256
+w2v_batch_size_list = [256, 128] #suggestion: 256
 
 #BERT only
-bert = True
-small_model_list = [False]
+bert = False
+small_model_list = [True, False]
 bert_batch_size_list = [128]
-bert_epochs_list = [3, 6]
+bert_epochs_list = [3, 6, 12]
 max_length_of_document_vector_bert_list = [500] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
 classifier_loss_function_bert_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
 

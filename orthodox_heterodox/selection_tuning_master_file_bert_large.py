@@ -122,7 +122,7 @@ journal_list = [65,1]
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
-results_file_name = "results_test_tfidf_short"
+results_file_name = "results_final"
 
 #TFIDF only
 tfidf = False
