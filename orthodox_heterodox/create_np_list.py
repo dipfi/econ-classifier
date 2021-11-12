@@ -105,8 +105,8 @@ input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
 sample_size = "all" #input_file_size #10000 #"all"
 use_reproducible_train_test_split = True
-train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9_1000"
-test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1_1000"
+train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9"
+test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
@@ -1068,7 +1068,10 @@ for index, all_test in all_journals.iterrows():
                     minlen = min([len(i) for i in idx])
                     idx = [i[:max_length_of_document_vector_bert] for i in idx]
 
-
+                    np.savetxt(data_path + "/" + str(train_set_name) + "_" + str(max_length_of_document_vector_bert_list) + "_bert_feature_matrix.csv",
+                               idx,
+                               delimiter=",",
+                               fmt='% s')
 
                     ## feature matrix
                     logger.info("feature matrix")
@@ -1206,139 +1209,10 @@ for index, all_test in all_journals.iterrows():
                         minlen = min([len(i) for i in idx])
                         idx = [i[:max_length_of_document_vector_bert] for i in idx]
 
-
-
-                        ## feature matrix
-                        logger.info("feature matrix test")
-
-                        if small_model:
-                            X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32')]
-
-                        else:
-                            ## generate segments
-                            logger.info("generate segments")
-                            segments = []
-                            for seq in txt2seq:
-                                temp, i = [], 0
-                                for token in seq.split(" "):
-                                    temp.append(i)
-                                    if token == "[SEP]":
-                                        i += 1
-                                segments.append(temp)
-
-                            X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32'), np.array(segments, dtype='int32')]
-
-
-
-
-
-                        ## encode y
-                        logger.info("encode y")
-                        dic_y_mapping = {n:label for n,label in enumerate(np.unique(y_train))}
-                        inverse_dic = {v:k for k,v in dic_y_mapping.items()}
-                        y_train_bin = np.array([inverse_dic[y] for y in y_train["y"]])
-
-                        bert_batch_size_loop = 0
-
-                        for bert_batch_size in bert_batch_size_list:
-
-                            bert_batch_size_loop += 1
-
-                            bert_epochs_loop = 0
-
-                            for bert_epochs in bert_epochs_list:
-
-                                class_time_start = time.perf_counter()
-
-                                bert_epochs_loop += 1
-
-                                logger.info("max_length_of_document_vector_bert_loop Nr: " + str(max_length_of_document_vector_bert_loop))
-                                logger.info("max_length_of_document_vector_bert : " + str(max_length_of_document_vector_bert))
-                                logger.info("bert_batch_size Nr: " + str(bert_batch_size_loop))
-                                logger.info("bert_batch_size : " + str(bert_batch_size))
-                                logger.info("bert_epochs_loop Nr: " + str(bert_epochs_loop))
-                                logger.info("bert_epochs : " + str(bert_epochs))
-
-                                ## train
-                                training = model.fit(x=X_train_new, y=y_train_bin, batch_size=bert_batch_size, epochs=bert_epochs, shuffle=True, verbose=1, validation_split=0.3)
-
-                                class_time_total = time.perf_counter() - class_time_start
-                                logger.info(f"classification with {bert_epochs} epochs batch size {bert_batch_size} for {len(dtf)} samples in {class_time_total} seconds")
-
-
-
-                                #results allg
-                                now = time.asctime()
-                                result_id = "RESULT" + str(int(time.time() * 1000))
-
-                                result_all = pd.DataFrame({"time": [now],
-                                                           "trainingset_id": [trainingset_id],
-                                                           "result_id": [result_id],
-                                                           "length_data": [len(dtf)],
-                                                           "length_training_orig": [len(dtf_train)],
-                                                           "length_training_samp": [len(X_train_raw_series)],
-                                                           "test_journal": [test_journal],
-                                                           "use_reproducible_train_test_split": [use_reproducible_train_test_split],
-                                                           "train_set_name": [train_set_name],
-                                                           "test_set_name": [test_set_name],
-                                                           "tfidf": [tfidf],
-                                                           "w2v": [w2v],
-                                                           "bert": [bert],
-                                                           "duration": [class_time_total],
-                                                           "current_model": [current_model]})
-
-
-                                # results bert
-                                result_bert = pd.DataFrame({"max_length_of_document_vector_bert": [max_length_of_document_vector_bert],
-                                                          "classifier_loss_function_bert": [classifier_loss_function_bert],
-                                                          "small_model": [small_model],
-                                                          "bert_batch_size": [bert_batch_size],
-                                                          "bert_epochs": [bert_epochs]})
-
-
-                                ## test
-                                predicted_prob = model.predict(X_test)
-                                predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
-                                y_test = dtf_test[label_field].values
-                                predicted_bin = np.array([np.argmax(pred) for pred in predicted_prob])
-                                y_test_bin = np.array([inverse_dic[y] for y in y_test])
-                                classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
-
-
-
-
-                                ### EVALUATION
-                                if __name__ == "__main__":
-                                    result_fct = fcts.evaluate(classes = classes,
-                                                                 #y_test = y_test,
-                                                                 y_test_bin = y_test_bin,
-                                                                 #predicted = predicted,
-                                                                 predicted_bin = predicted_bin,
-                                                                 predicted_prob = predicted_prob)
-
-                                    result = pd.concat([result_all, result_fct, result_bert], axis = 1)
-
-                                    logger.info("RESULT DETAILS:")
-                                    logger.info(result)
-
-                                if save_results:
-                                    logger.info("SAVING RESULTS")
-
-                                    if __name__ == "__main__":
-                                        results, pred_prob_df = fcts.save_results(data_path=data_path,
-                                                                                 results_file_name=results_file_name,
-                                                                                 result=result,
-                                                                                 dtf_test=dtf_test,
-                                                                                 trainingset_id=trainingset_id,
-                                                                                 result_id=result_id,
-                                                                                 predicted_prob=predicted_prob,
-                                                                                 y_test_bin=y_test_bin)
-
-
-
-
-
-
+                        np.savetxt(data_path + "/" + str(test_set_name) + "_" + str(max_length_of_document_vector_bert_list) + "_bert_feature_matrix.csv",
+                                   idx,
+                                   delimiter = ",",
+                                   fmt = '% s')
 
 
 toc = time.perf_counter()
