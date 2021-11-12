@@ -105,8 +105,8 @@ input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
 sample_size = "all" #input_file_size #10000 #"all"
 use_reproducible_train_test_split = True
-train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9"
-test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
+train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9_1000"
+test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1_1000"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
@@ -1068,7 +1068,7 @@ for index, all_test in all_journals.iterrows():
                     minlen = min([len(i) for i in idx])
                     idx = [i[:max_length_of_document_vector_bert] for i in idx]
 
-                    np.savetxt(data_path + "/" + str(train_set_name) + "_" + str(max_length_of_document_vector_bert_list) + "_bert_feature_matrix.csv",
+                    np.savetxt(data_path + "/" + str(train_set_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
                                idx,
                                delimiter=",",
                                fmt='% s')
@@ -1209,7 +1209,7 @@ for index, all_test in all_journals.iterrows():
                         minlen = min([len(i) for i in idx])
                         idx = [i[:max_length_of_document_vector_bert] for i in idx]
 
-                        np.savetxt(data_path + "/" + str(test_set_name) + "_" + str(max_length_of_document_vector_bert_list) + "_bert_feature_matrix.csv",
+                        np.savetxt(data_path + "/" + str(test_set_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
                                    idx,
                                    delimiter = ",",
                                    fmt = '% s')
