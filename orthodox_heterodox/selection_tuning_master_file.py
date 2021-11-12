@@ -97,11 +97,14 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
-sample_size = "all"  #input_file_size #10000 #"all"
+sample_size = "all" #input_file_size #10000 #"all"
+use_reproducible_train_test_split = True
+train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train"
+test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
@@ -119,14 +122,14 @@ journal_list = [65,1]
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
-results_file_name = "results_test_w2v"
+results_file_name = "results_test_tfidf_short"
 
 #TFIDF only
-tfidf = False
-max_features_list = [1000, 10000, 30000] #[1000, 5000, 10000]
-p_value_limit_list = [0.95, 0.9, 0.7] #[0.8, 0.9, 0.95]
-ngram_range_list = [(1,1), (1,3)] #[(1,1), (1,2), (1,3)]
-tfidf_classifier_list = ["naive_bayes", "LogisticRegression", "GradientBoostingClassifier", "LogisticRegressionCV", "RandomForestClassifier", "SVC"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
+tfidf = True
+max_features_list = [1000] #[1000, 5000, 10000]
+p_value_limit_list = [0.95] #[0.8, 0.9, 0.95]
+ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
+tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
 
 #w2v only
 w2v = False
@@ -136,11 +139,11 @@ use_embeddings = True #if True a trained model needs to be selected below
 embedding_folder = "embeddings"
 train_new = False #if True new embeddings are trained
 
-num_epochs_for_embedding_list = [10,15,20] #number of epochs to train the word embeddings ; sugegstion: 15 (embedding_set = "False")
-num_epochs_for_classification_list= [5,10,15] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
-embedding_vector_length_list = [50,150,300] #suggesion: 300
+num_epochs_for_embedding_list = [10] #number of epochs to train the word embeddings ; sugegstion: 15 (embedding_set = "False")
+num_epochs_for_classification_list= [10] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
+embedding_vector_length_list = [300] #suggesion: 300
 
-window_size_list = [4,8,12] #suggesion: 8
+window_size_list = [8] #suggesion: 8
 
 embedding_only = False
 embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False ; suggestion: False
@@ -150,11 +153,11 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256, 128] #suggestion: 256
 
 #BERT only
-bert = True
+bert = False
 small_model_list = [True, False]
 bert_batch_size_list = [128]
 bert_epochs_list = [3, 6, 12]
-max_length_of_document_vector_bert_list = [50] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
+max_length_of_document_vector_bert_list = [500] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
 classifier_loss_function_bert_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
 
 ############################################
@@ -333,10 +336,13 @@ for index, all_test in all_journals.iterrows():
         training_set_id = ''.join(test_journal.split()) + str(int(time.time()*1000))
 
     else:
-        dtf_train, dtf_test = model_selection.train_test_split(dtf, test_size=test_size)
+        dtf_train, dtf_test = model_selection.train_test_split(dtf, test_size = test_size, random_state = 42)
         training_set_id = "random" + str(int(time.time()*1000))
 
-
+    if use_reproducible_train_test_split:
+        dtf_train = pd.read_csv(data_path + "/" + train_set_name + ".csv")
+        dtf_test = pd.read_csv(data_path + "/" + test_set_name + ".csv")
+        training_set_id = "use_reproducible_train_test_split"
 
 
     #balanbce dataset
@@ -707,9 +713,9 @@ for index, all_test in all_journals.iterrows():
                             load_embeddings_start = time.perf_counter()
 
                             if journal_split:
-                                modelname = "word2vec_" + str(test_journal.replace(" ", "_")) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set)
+                                modelname = "word2vec_" + str(test_journal.replace(" ", "_")) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
                             else:
-                                modelname = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set)
+                                modelname = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
 
                             pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
 
@@ -730,10 +736,10 @@ for index, all_test in all_journals.iterrows():
                         if train_new:
                             train_embeddings_start = time.perf_counter()
                             if journal_split:
-                                modelname_raw = "word2vec_" + str(test_journal.replace(" ", "_")) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set)
+                                modelname_raw = "word2vec_" + str(test_journal.replace(" ", "_")) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
 
                             else:
-                                modelname_raw = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_train_" + str(training_set) + "_embed_" + str(embedding_set)
+                                modelname_raw = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
 
                             modelname = "newembedding_" + str(modelname_raw)
 
@@ -931,14 +937,15 @@ for index, all_test in all_journals.iterrows():
                                                                           "use_embeddings": [use_embeddings],
                                                                           "embedding_folder": [embedding_folder],
                                                                           "train_new": [train_new],
-                                                                          "embedding_vector_length_list": [embedding_vector_length],
-                                                                          "num_epochs_for_embedding_list": [num_epochs_for_embedding],
-                                                                          "window_size_list": [window_size],
+                                                                          "embedding_vector_length": [embedding_vector_length],
+                                                                          "num_epochs_for_embedding": [num_epochs_for_embedding],
+                                                                          "window_size": [window_size],
                                                                           "embedding_only": [embedding_only],
-                                                                          "embedding_set": [num_epochs_for_classification],
+                                                                          "embedding_set": [embedding_set],
                                                                           "max_length_of_document_vector_w2v": [max_length_of_document_vector_w2v],
                                                                           "classifier_loss_function_w2v": [classifier_loss_function_w2v],
-                                                                          "w2v_batch_size": [w2v_batch_size]})
+                                                                          "w2v_batch_size": [w2v_batch_size],
+                                                                       "num_epochs_for_classification": [num_epochs_for_classification]})
 
                                             ## test
                                             predicted_prob = model.predict(X_test)
