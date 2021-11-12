@@ -114,7 +114,7 @@ plot = 0 #0 = none, 1 = some, 2 = all
 
 save_results = True
 
-journal_split = True
+journal_split = False
 num_journals = "all" #3 #"all"
 random_journals = False
 journal_list = False # [65,1]

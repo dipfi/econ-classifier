@@ -617,6 +617,7 @@ for index, all_test in all_journals.iterrows():
 
 
         if current_model == "w2v":
+            gigaword_loaded = False
 
             if embedding_set == "oversample":
                 over_sampler = RandomOverSampler(random_state=42)

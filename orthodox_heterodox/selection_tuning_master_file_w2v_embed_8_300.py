@@ -114,7 +114,7 @@ plot = 0 #0 = none, 1 = some, 2 = all
 
 save_results = True
 
-journal_split = True
+journal_split = False
 num_journals = "all" #3 #"all"
 random_journals = False
 journal_list = False # [65,1]
@@ -141,9 +141,9 @@ train_new = True #if True new embeddings are trained
 
 num_epochs_for_embedding_list = [10, 15, 20] #number of epochs to train the word embeddings ; sugegstion: 15 (embedding_set = "False")
 num_epochs_for_classification_list= [5] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
-embedding_vector_length_list = [50] #suggesion: 300
+embedding_vector_length_list = [300] #suggesion: 300
 
-window_size_list = [12] #suggesion: 8
+window_size_list = [8] #suggesion: 8
 
 embedding_only = True
 embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False ; suggestion: False
