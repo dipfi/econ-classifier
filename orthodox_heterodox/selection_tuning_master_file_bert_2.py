@@ -119,7 +119,7 @@ save_results = True
 journal_split = True
 num_journals = "all" #3 #"all"
 random_journals = False
-journal_list = [i for i in range(40,50)] #False # [65,1]
+journal_list = [i for i in range(10,20)] #False # [65,1]
 
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
