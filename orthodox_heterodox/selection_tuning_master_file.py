@@ -119,7 +119,7 @@ save_results = True
 journal_split = True
 num_journals = "all" #3 #"all"
 random_journals = False
-journal_list = [i for i in range(75,78)] #False # [65,1]
+journal_list = [i for i in range(0,30)] #False # [65,1]
 
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
@@ -127,7 +127,7 @@ training_set = "oversample" # "oversample", "undersample", "heterodox", "samequa
 results_file_name = "results_test_tfidf_short"
 
 #TFIDF only
-tfidf = False
+tfidf = True
 max_features_list = [30000] #[1000, 5000, 10000]
 p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
@@ -155,7 +155,7 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = True
+bert = False
 small_model_list = [True]
 bert_batch_size_list = [64]
 bert_epochs_list = [6]

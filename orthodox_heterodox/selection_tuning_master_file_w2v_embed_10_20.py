@@ -136,10 +136,10 @@ tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegress
 #w2v only
 w2v = True
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
-use_embeddings = False #if True a trained model needs to be selected below
+use_embeddings = True #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
 embedding_folder = "embeddings"
-train_new = True #if True new embeddings are trained
+train_new = False #if True new embeddings are trained
 
 num_epochs_for_embedding_list = [10] #number of epochs to train the word embeddings ; sugegstion: 15 (embedding_set = "False")
 num_epochs_for_classification_list= [10] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
@@ -147,7 +147,7 @@ embedding_vector_length_list = [300] #suggesion: 300
 
 window_size_list = [8] #suggesion: 8
 
-embedding_only = True
+embedding_only = False
 embedding_set = False # "oversample", "undersample", "heterodox", "samequality", False ; suggestion: False
 
 max_length_of_document_vector_w2v_list = [100] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 100
