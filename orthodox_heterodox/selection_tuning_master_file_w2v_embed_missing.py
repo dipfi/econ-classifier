@@ -99,7 +99,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
@@ -119,7 +119,16 @@ save_results = True
 journal_split = True
 num_journals = "all" #3 #"all"
 random_journals = False
-journal_list = [i for i in range(0,10)] #False # [65,1]
+journal_list = ["ECONOMIC SYSTEMS RESEARCH",
+                "REVIEW OF BLACK POLITICAL ECONOMY",
+                "ASTIN BULLETIN",
+                "ENERGY JOURNAL",
+                "FUTURES",
+                "JOURNAL OF ENVIRONMENTAL ECONOMICS AND MANAGEMENT",
+                "PUBLIC CHOICE",
+                "REAL ESTATE ECONOMICS",
+                "REGIONAL SCIENCE AND URBAN ECONOMICS",
+                "WORLD DEVELOPMENT"] #False # [65,1]
 
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
@@ -134,7 +143,7 @@ ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
 tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
 
 #w2v only
-w2v = False
+w2v = True
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
@@ -155,10 +164,10 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = True
+bert = False
 small_model_list = [True]
 bert_batch_size_list = [64]
-bert_epochs_list = [1]
+bert_epochs_list = [6]
 max_length_of_document_vector_bert_list = [350] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
 classifier_loss_function_bert_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
 use_bert_feature_matrix = True
@@ -289,7 +298,6 @@ TRAIN TEST SPLIT
 '''
 logger.info("TRAIN TEST SPLIT")
 
-dtf["index"] = np.arange(dtf.shape[0])
 
 if journal_split:
 
@@ -363,21 +371,18 @@ for index, all_test in all_journals.iterrows():
 
     if training_set == "oversample":
         over_sampler = RandomOverSampler(random_state=42)
-        X_train, y_train = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field], "ID": dtf_train["index"]}), pd.DataFrame({"y": dtf_train[label_field]}))
-        X_train_ids = X_train["ID"].tolist()
+        X_train, y_train = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field]}), pd.DataFrame({"y": dtf_train[label_field]}))
         X_train_raw = pd.DataFrame({"X": X_train["X_raw"].tolist()})
         X_train = pd.DataFrame({"X": X_train["X"].tolist()})
 
     elif training_set == "undersample":
         under_sampler = RandomUnderSampler(random_state=42)
-        X_train, y_train = under_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field], "ID": dtf_train["index"]}), pd.DataFrame({"y": dtf_train[label_field]}))
-        X_train_ids = X_train["ID"].tolist()
+        X_train, y_train = under_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field]}), pd.DataFrame({"y": dtf_train[label_field]}))
         X_train_raw = pd.DataFrame({"X": X_train["X_raw"].tolist()})
         X_train = pd.DataFrame({"X": X_train["X"].tolist()})
 
     else:
-        X_train = pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field], "ID": dtf_train["index"]})
-        X_train_ids = X_train["ID"].tolist()
+        X_train = pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field]})
         y_train = pd.DataFrame({"y": dtf_train[label_field]})
         X_train_raw = pd.DataFrame({"X": X_train["X_raw"].tolist()})
         X_train = pd.DataFrame({"X": X_train["X"].tolist()})
@@ -1075,10 +1080,8 @@ for index, all_test in all_journals.iterrows():
 
 
                     if use_bert_feature_matrix:
-                        idx_frozen = pd.read_csv(data_path + "/" + str(input_file_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
-                                          delimiter=",", header = None).values.tolist()
-
-                        idx = [idx_frozen[i-1] for i in X_train_ids]
+                        idx = pd.read_csv(data_path + "/" + str(train_set_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
+                                          delimiter=",").values.tolist()
 
                     else:
                         idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
@@ -1200,8 +1203,6 @@ for index, all_test in all_journals.iterrows():
                         # Feature engineer Test set
                         logger.info("Feature engineer Test set")
 
-                        X_test_ids = dtf_test["index"].tolist()
-
                         text_lst = [text[:-50] for text in dtf_test[text_field]]
                         text_lst = [' '.join(text.split()[:maxqnans]) for text in text_lst]
                         #text_lst = [text for text in text_lst if text]
@@ -1227,10 +1228,8 @@ for index, all_test in all_journals.iterrows():
                         logger.info("generate idx test")
 
                         if use_bert_feature_matrix:
-                            idx_frozen = pd.read_csv(data_path + "/" + str(input_file_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
-                                              delimiter=",", header = None).values.tolist()
-
-                            idx = [idx_frozen[i] for i in X_test_ids]
+                            idx = pd.read_csv(data_path + "/" + str(test_set_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
+                                              delimiter=",").values.tolist()
 
                         else:
                             idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
@@ -1238,7 +1237,7 @@ for index, all_test in all_journals.iterrows():
                             idx = [i[:max_length_of_document_vector_bert] for i in idx]
 
                             if save_bert_feature_matrix:
-                                np.savetxt(data_path + "/" + str(input_file_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
+                                np.savetxt(data_path + "/" + str(test_set_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
                                            idx,
                                            delimiter=",",
                                            fmt='% s')
