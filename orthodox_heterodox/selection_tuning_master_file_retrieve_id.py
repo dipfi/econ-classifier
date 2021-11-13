@@ -289,6 +289,7 @@ TRAIN TEST SPLIT
 '''
 logger.info("TRAIN TEST SPLIT")
 
+dtf["index"] = np.arange(dtf.shape[0])
 
 if journal_split:
 
@@ -362,18 +363,21 @@ for index, all_test in all_journals.iterrows():
 
     if training_set == "oversample":
         over_sampler = RandomOverSampler(random_state=42)
-        X_train, y_train = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field]}), pd.DataFrame({"y": dtf_train[label_field]}))
+        X_train, y_train = over_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field], "ID": dtf_train["index"]}), pd.DataFrame({"y": dtf_train[label_field]}))
+        X_train_ids = X_train["ID"].tolist()
         X_train_raw = pd.DataFrame({"X": X_train["X_raw"].tolist()})
         X_train = pd.DataFrame({"X": X_train["X"].tolist()})
 
     elif training_set == "undersample":
         under_sampler = RandomUnderSampler(random_state=42)
-        X_train, y_train = under_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field]}), pd.DataFrame({"y": dtf_train[label_field]}))
+        X_train, y_train = under_sampler.fit_resample(pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field], "ID": dtf_train["index"]}), pd.DataFrame({"y": dtf_train[label_field]}))
+        X_train_ids = X_train["ID"].tolist()
         X_train_raw = pd.DataFrame({"X": X_train["X_raw"].tolist()})
         X_train = pd.DataFrame({"X": X_train["X"].tolist()})
 
     else:
-        X_train = pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field]})
+        X_train = pd.DataFrame({"X": dtf_train[text_field_clean], "X_raw": dtf_train[text_field], "ID": dtf_train["index"]})
+        X_train_ids = X_train["ID"].tolist()
         y_train = pd.DataFrame({"y": dtf_train[label_field]})
         X_train_raw = pd.DataFrame({"X": X_train["X_raw"].tolist()})
         X_train = pd.DataFrame({"X": X_train["X"].tolist()})
@@ -1071,8 +1075,10 @@ for index, all_test in all_journals.iterrows():
 
 
                     if use_bert_feature_matrix:
-                        idx = pd.read_csv(data_path + "/" + str(input_file_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
+                        idx_frozen = pd.read_csv(data_path + "/" + str(train_set_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
                                           delimiter=",").values.tolist()
+
+                        idx = [idx_frozen[i] for i in X_train_ids]
 
                     else:
                         idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
@@ -1219,8 +1225,10 @@ for index, all_test in all_journals.iterrows():
                         logger.info("generate idx test")
 
                         if use_bert_feature_matrix:
-                            idx = pd.read_csv(data_path + "/" + str(input_file_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
+                            idx_frozen = pd.read_csv(data_path + "/" + str(test_set_name) + "_" + str(max_length_of_document_vector_bert) + "_bert_feature_matrix.csv",
                                               delimiter=",").values.tolist()
+
+                            idx = [idx_frozen[i] for i in X_train_ids]
 
                         else:
                             idx = [tokenizer.encode(seq.split(" "), is_split_into_words=True) for seq in txt2seq]
