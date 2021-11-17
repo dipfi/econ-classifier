@@ -99,14 +99,11 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_wip"
 sample_size = "all" #input_file_size #10000 #"all"
-use_reproducible_train_test_split = True
-train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9"
-test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
@@ -116,7 +113,12 @@ plot = 0 #0 = none, 1 = some, 2 = all
 
 save_results = True
 
-journal_split = True
+train_on_all = True
+use_reproducible_train_test_split = False
+train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9_1000"
+test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1_1000"
+journal_split = False
+
 num_journals = "all" #3 #"all"
 random_journals = False
 journal_list = [i for i in range(70,78)] #False # [65,1]
@@ -125,6 +127,8 @@ test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
 results_file_name = "results_test_tfidf_short"
+
+
 
 #TFIDF only
 tfidf = False
@@ -354,8 +358,8 @@ for index, all_test in all_journals.iterrows():
             dtf_train, dtf_test = model_selection.train_test_split(dtf, test_size = test_size, random_state=42)
             training_set_id = "random" + str(int(time.time()*1000))
 
-
-
+    if train_on_all == True:
+        dtf_train = dtf
 
     #balanbce dataset
     logger.info("BALANCE TRAINING SET")
