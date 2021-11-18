@@ -349,11 +349,11 @@ def utils_preprocess_text(text,
 
     lst_stopwords = nltk.corpus.stopwords.words("english")
 
-    subtitles = ["design", "methodology", "approach", "originality", "value", "limitations", "implications"]
+    subtitles = ["design", "methodology", "approach", "originality", "value", "limitations", "implications", "elsevier"]
     lst_stopwords.extend(subtitles)
 
     ## clean (convert to lowercase and remove punctuations and characters and then strip)
-    text = re.sub(r'[^\w\s]', ' ', str(text[:-remove_last_n]).lower().strip())
+    text = re.sub(r'[^\w\s\d]', ' ', str(text[:-remove_last_n]).lower().strip())
 
     ## Tokenize (convert from string to list)
     lst_text = text.split()

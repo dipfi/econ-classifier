@@ -101,7 +101,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_1000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_new_10000"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
@@ -112,7 +112,7 @@ save_results = True
 results_file_name = False
 
 save_model = True
-use_model = True
+use_model = False
 
 model_file_name = False
 
@@ -283,6 +283,10 @@ if use_model:
 
     dtf = pd.read_csv(data_path + "/" + input_file_name + ".csv")
 
+    dtf["index"] = np.arange(dtf.shape[0])
+
+
+
     X_test = dtf[text_field_clean].values
 
     dic_y_mapping = {0: "0orthodox",
@@ -290,9 +294,9 @@ if use_model:
     inverse_dic = {v: k for k, v in dic_y_mapping.items()}
 
     if tfidf:
-        model_filename = (data_path + "/models/" + tfidf_model_file_name + ".pkl")
+        model_file_path = (data_path + "/models/" + tfidf_model_file_name + ".pkl")
 
-        with open(model_filename, 'rb') as file:
+        with open(model_file_path, 'rb') as file:
             model_loaded = pickle.load(file)
 
         predicted = model_loaded.predict(X_test)
@@ -302,10 +306,52 @@ if use_model:
         predicted_bin = np.array([np.argmax(pred) for pred in predicted_prob])
         logger.info("TEST CALC FINISHED")
 
-    if w2v:
-        model_filename = (data_path + "/models/" + w2v_model_file_name)
 
-        model_loaded = models.load_model(model_filename)
+        weights_loaded_path = data_path + "/weights/" + tfidf_model_file_name + "_tfidf_weights.csv"
+
+        weights_loaded_dtf = pd.read_csv(weights_loaded_path)
+        weights_loaded_dict = {k: v for k, v in zip(weights_loaded_dtf["words"], weights_loaded_dtf["weights"])}
+
+        corpus = dtf[text_field_clean]
+        dtf_weights = pd.DataFrame()
+        for prediction in range(2):
+            idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
+            corpus_loop = corpus[idx]
+            ## create list of n-grams
+            lst_corpus = []
+            for string in corpus_loop:
+                lst_words = string.split()
+                lst_grams = [" ".join(lst_words[i:i + 1]) for i in range(0, len(lst_words), 1)]
+                lst_corpus.append(lst_grams)
+
+            dtf_corpus = pd.DataFrame({"words": [i for l in lst_corpus for i in l]})
+            dtf_corpus = dtf_corpus["words"].value_counts()
+
+            def catch(dict, w):
+                try:
+                    return dict[w]
+                except:
+                    return None
+
+            weights_list = [catch(weights_loaded_dict, w) for w in dtf_corpus.index.tolist()]
+            dtf_weights = dtf_weights.append(pd.DataFrame({"words": dtf_corpus.index.tolist(),
+                                                        "counts": dtf_corpus.values.tolist(),
+                                                        "weights": weights_list,
+                                                        "prediction": [prediction for i in weights_list]})).copy()
+
+        dtf_weights["weighted_counts"] = dtf_weights["counts"]*dtf_weights["weights"]
+        dtf_weights.to_csv(data_path + "/weights/input_" + input_file_name + "_model_" + tfidf_model_file_name + "_tfidf_weights.csv", index=False)
+
+
+
+
+
+
+
+    if w2v:
+        model_file_path = (data_path + "/models/" + w2v_model_file_name)
+
+        model_loaded = models.load_model(model_file_path)
 
         corpus = dtf[text_field_clean]
 
@@ -356,7 +402,7 @@ if use_model:
 
         inv_word_dic = {v: k for k, v in tokenizer.word_index.items()}
 
-        df_weights = pd.DataFrame()
+        dtf_weights = pd.DataFrame()
         for prediction in range(2):
             idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
             weights_loop = [weights[i] for i in idx]
@@ -365,19 +411,19 @@ if use_model:
             words = [i for s in words for i in s]
             weights_loop = [weights_loop[n] for n, idx in enumerate(words) if idx != 0]
             words = [inv_word_dic[i] for i in words if i != 0]
-            df_weights = df_weights.append(pd.DataFrame({"words": words, "weights": weights_loop, "prediction": [prediction for i in words]})).copy()
-        df_weights = df_weights.groupby(["words", "prediction"]).mean().copy()
+            dtf_weights = dtf_weights.append(pd.DataFrame({"words": words, "weights": weights_loop, "prediction": [prediction for i in words]})).copy()
+        dtf_weights = dtf_weights.groupby(["words", "prediction"]).mean().copy()
 
-        df_weights.to_csv(data_path + "/weights/" + input_file_name + "_wtf_weights.csv")
+        dtf_weights.to_csv(data_path + "/weights/input_" + input_file_name + "_model_" + w2v_model_file_name + "_w2v_weights.csv")
 
 
 
 
     if bert:
 
-        model_filename = (data_path + "/models/" + bert_model_file_name)
+        model_file_path = (data_path + "/models/" + bert_model_file_name)
 
-        model_loaded = models.load_model(model_filename)
+        model_loaded = models.load_model(model_file_path)
 
         small_model = small_model_list[0]
 
@@ -389,7 +435,7 @@ if use_model:
         # Feature engineer Test set
         logger.info("Feature engineer Test set")
 
-        #X_test_ids = dtf["index"].tolist()
+        X_test_ids = dtf["index"].tolist()
         max_length_of_document_vector_bert = max_length_of_document_vector_bert_list[0]
         maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
 
@@ -514,6 +560,7 @@ else:
     logger.info("LOAD DATA")
 
     dtf = pd.read_csv(data_path + "/" + input_file_name + ".csv")
+    dtf["index"] = np.arange(dtf.shape[0])
 
     if plot == 1 or plot == 2:
         fig, ax = plt.subplots()
@@ -772,8 +819,8 @@ else:
                                 model["classifier"].fit(X_train_new2, y_train_new)
 
                                 if save_model:
-                                    model_filename = (data_path + "/models/" + tfidf_model_file_name + ".pkl")
-                                    with open(model_filename, 'wb') as file:
+                                    model_file_path = (data_path + "/models/" + tfidf_model_file_name + ".pkl")
+                                    with open(model_file_path, 'wb') as file:
                                         pickle.dump(model, file)
 
                                     '''
@@ -864,9 +911,56 @@ else:
                                                                                   y_test_bin=y_test_bin)
 
 
+                                words = vectorizer_new.get_feature_names()
+                                weights = [i for i in model["classifier"].coef_[0]]
+                                dtf_weights = pd.DataFrame({"words": words, "weights" : weights})
+
+                                weights_loaded_dict = {k: v for k, v in zip(dtf_weights["words"], dtf_weights["weights"])}
+
+                                corpus = dtf_test[text_field_clean]
+                                dtf_weights = pd.DataFrame()
+                                for prediction in range(2):
+                                    idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
+                                    corpus_loop = corpus.iloc[idx]
+                                    ## create list of n-grams
+                                    lst_corpus = []
+                                    for string in corpus_loop:
+                                        lst_words = string.split()
+                                        lst_grams = [" ".join(lst_words[i:i + 1]) for i in range(0, len(lst_words), 1)]
+                                        lst_corpus.append(lst_grams)
+
+                                    dtf_corpus = pd.DataFrame({"words": [i for l in lst_corpus for i in l]})
+                                    dtf_corpus = dtf_corpus["words"].value_counts()
+
+
+                                    def catch(dict, w):
+                                        try:
+                                            return dict[w]
+                                        except:
+                                            return None
+
+
+                                    weights_list = [catch(weights_loaded_dict, w) for w in dtf_corpus.index.tolist()]
+                                    dtf_weights = dtf_weights.append(pd.DataFrame({"words": dtf_corpus.index.tolist(),
+                                                                                   "counts": dtf_corpus.values.tolist(),
+                                                                                   "weights": weights_list,
+                                                                                   "prediction": [prediction for i in weights_list]})).copy()
+
+                                dtf_weights["weighted_counts"] = dtf_weights["counts"] * dtf_weights["weights"]
+                                dtf_weights.to_csv(data_path + "/weights/" + tfidf_model_file_name + "_tfidf_weights.csv", index=False)
 
 
 
+
+
+
+
+
+
+
+###################################################################################################
+            ###################################################################################################
+            ###################################################################################################
 
 
 
@@ -1160,8 +1254,8 @@ else:
                                                 training = model.fit(x=X_train_new, y=y_train_bin, batch_size=w2v_batch_size, epochs=num_epochs_for_classification, shuffle=True, verbose=0, validation_split=0.3, workers=cores)
 
                                                 if save_model:
-                                                    model_filename = (data_path + "/models/" + w2v_model_file_name)
-                                                    model.save(model_filename)
+                                                    model_file_path = (data_path + "/models/" + w2v_model_file_name)
+                                                    model.save(model_file_path)
 
                                                 class_time_total = time.perf_counter() - class_time_start
                                                 logger.info(f"classification with {num_epochs_for_classification} epochs batch size {w2v_batch_size} for {len(dtf)} samples in {class_time_total} seconds")
@@ -1277,7 +1371,7 @@ else:
 
                                                 inv_word_dic = {v: k for k, v in tokenizer.word_index.items()}
 
-                                                df_weights = pd.DataFrame()
+                                                dtf_weights = pd.DataFrame()
                                                 for prediction in range(2):
                                                     idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
                                                     weights_loop = [weights[i] for i in idx]
@@ -1286,10 +1380,10 @@ else:
                                                     words = [i for s in words for i in s]
                                                     weights_loop = [weights_loop[n] for n, idx in enumerate(words) if idx != 0]
                                                     words = [inv_word_dic[i] for i in words if i != 0]
-                                                    df_weights = df_weights.append(pd.DataFrame({"words": words, "weights": weights_loop, "prediction": [prediction for i in words]})).copy()
-                                                df_weights = df_weights.groupby(["words","prediction"]).mean().copy()
+                                                    dtf_weights = dtf_weights.append(pd.DataFrame({"words": words, "weights": weights_loop, "prediction": [prediction for i in words]})).copy()
+                                                dtf_weights = dtf_weights.groupby(["words","prediction"]).mean().copy()
 
-                                                df_weights.to_csv(data_path + "/weights/" + input_file_name + "_wtf_weights.csv")
+                                                dtf_weights.to_csv(data_path + "/weights/" + w2v_model_file_name + "_w2v_weights.csv")
 
 
 
@@ -1585,8 +1679,8 @@ else:
                                     model.fit(x=X_train_new, y=y_train_bin, batch_size=bert_batch_size, epochs=bert_epochs, shuffle=True, verbose=1, validation_split=0.3)
 
                                     if save_model:
-                                        model_filename = str(data_path + "/models/" + bert_model_file_name)
-                                        saving = model.save_weights(model_filename)
+                                        model_file_path = str(data_path + "/models/" + bert_model_file_name)
+                                        saving = model.save_weights(model_file_path)
 
                                     class_time_total = time.perf_counter() - class_time_start
                                     logger.info(f"classification with {bert_epochs} epochs batch size {bert_batch_size} for {len(dtf)} samples in {class_time_total} seconds")
