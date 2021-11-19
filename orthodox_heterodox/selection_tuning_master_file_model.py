@@ -101,7 +101,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_new_10000"
+input_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_1000"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
@@ -112,10 +112,9 @@ save_results = True
 results_file_name = False
 
 save_model = True
-use_model = False
+use_model = True
 
 model_file_name = False
-
 
 
 train_on_all = True
@@ -140,7 +139,7 @@ ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
 tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
 
 #w2v only
-w2v = True
+w2v = False
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
@@ -161,7 +160,7 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = False
+bert = True
 small_model_list = [True]
 bert_batch_size_list = [64] #suggestion 64
 bert_epochs_list = [1]
@@ -257,19 +256,23 @@ logger = logging.getLogger()
 
 
 
-if results_file_name:
-    tfidf_results_file_name, w2v_results_file_name, bert_results_file_name = [results_file_name for i in range(3)]
-else:
-    tfidf_results_file_name = input_file_name + "tfidf_results"
-    w2v_results_file_name = input_file_name + "w2v_results"
-    bert_results_file_name = input_file_name + "bert_results"
+if results_file_name == False:
 
-if model_file_name:
-    tfidf_model_file_name, w2v_model_file_name, bert_model_file_name = [model_file_name for i in range(3)]
-else:
-    tfidf_model_file_name = input_file_name + "_tfidf_model"
-    w2v_model_file_name = input_file_name + "_w2v_model"
-    bert_model_file_name = input_file_name + "_bert_model"
+    if tfidf:
+        results_file_name = input_file_name + "_tfidf_results"
+    if w2v:
+        results_file_name = input_file_name + "_w2v_results"
+    if bert:
+        results_file_name = input_file_name + "_bert_results"
+        
+if model_file_name == False:
+
+    if tfidf:
+        model_file_name = input_file_name + "_tfidf_model"
+    if w2v:
+        model_file_name = input_file_name + "_w2v_model"
+    if bert:
+        model_file_name = input_file_name + "_bert_model"
 
 
 
@@ -294,7 +297,7 @@ if use_model:
     inverse_dic = {v: k for k, v in dic_y_mapping.items()}
 
     if tfidf:
-        model_file_path = (data_path + "/models/" + tfidf_model_file_name + ".pkl")
+        model_file_path = (data_path + "/models/" + model_file_name + ".pkl")
 
         with open(model_file_path, 'rb') as file:
             model_loaded = pickle.load(file)
@@ -307,7 +310,7 @@ if use_model:
         logger.info("TEST CALC FINISHED")
 
 
-        weights_loaded_path = data_path + "/weights/" + tfidf_model_file_name + "_tfidf_weights.csv"
+        weights_loaded_path = data_path + "/weights/" + model_file_name + "_tfidf_weights.csv"
 
         weights_loaded_dtf = pd.read_csv(weights_loaded_path)
         weights_loaded_dict = {k: v for k, v in zip(weights_loaded_dtf["words"], weights_loaded_dtf["weights"])}
@@ -340,7 +343,7 @@ if use_model:
                                                         "prediction": [prediction for i in weights_list]})).copy()
 
         dtf_weights["weighted_counts"] = dtf_weights["counts"]*dtf_weights["weights"]
-        dtf_weights.to_csv(data_path + "/weights/input_" + input_file_name + "_model_" + tfidf_model_file_name + "_tfidf_weights.csv", index=False)
+        dtf_weights.to_csv(data_path + "/weights/input_" + input_file_name + "_model_" + model_file_name + "_tfidf_weights.csv", index=False)
 
 
 
@@ -349,7 +352,7 @@ if use_model:
 
 
     if w2v:
-        model_file_path = (data_path + "/models/" + w2v_model_file_name)
+        model_file_path = (data_path + "/models/" + model_file_name)
 
         model_loaded = models.load_model(model_file_path)
 
@@ -390,10 +393,15 @@ if use_model:
         y_test = dtf[label_field].values
         predicted_bin = np.array([np.argmax(pred) for pred in predicted_prob])
 
+        """     
         layer = [layer for layer in model_loaded.layers if "attention" in layer.name][0]
         func = K.function([model_loaded.input], [layer.output])
-        weights = func(X_test)[0]
-        weights = np.mean(weights, axis=2)
+
+        weights = np.zeros((len(X_test), max_length_of_document_vector_w2v))
+        for i in range(0, len(X_test), 2500):
+            weight = func(X_test[i:i + 2500])[0]
+            weight = np.mean(weight, axis=2)
+            weights[i:i + 2500] = weight
 
         # weights = np.mean(weights, axis=2).flatten()
 
@@ -402,26 +410,43 @@ if use_model:
 
         inv_word_dic = {v: k for k, v in tokenizer.word_index.items()}
 
-        dtf_weights = pd.DataFrame()
+        dtf_weights_long = pd.DataFrame()
         for prediction in range(2):
             idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
             weights_loop = [weights[i] for i in idx]
             weights_loop = [i for s in weights for i in s]
             words = [X_test[i] for i in idx]
             words = [i for s in words for i in s]
-            weights_loop = [weights_loop[n] for n, idx in enumerate(words) if idx != 0]
-            words = [inv_word_dic[i] for i in words if i != 0]
-            dtf_weights = dtf_weights.append(pd.DataFrame({"words": words, "weights": weights_loop, "prediction": [prediction for i in words]})).copy()
-        dtf_weights = dtf_weights.groupby(["words", "prediction"]).mean().copy()
+            weights_loop = [weights_loop[n] for n, idx in enumerate(words) if idx > 1]
+            words = [inv_word_dic[i] for i in words if i > 1]
+            dtf_weights_long = dtf_weights_long.append(pd.DataFrame({"words": words, "weights": weights_loop, "prediction": [prediction for i in words]})).copy()
+        dtf_weights = dtf_weights_long.groupby(["words", "prediction"]).mean().copy()
+        dtf_weights["count"] = dtf_weights_long.groupby(["words", "prediction"]).count()["weights"].to_list()
 
-        dtf_weights.to_csv(data_path + "/weights/input_" + input_file_name + "_model_" + w2v_model_file_name + "_w2v_weights.csv")
+        dtf_weights.to_csv(data_path + "/weights/input_" + input_file_name + "_model_" + model_file_name + "_w2v_weights.csv")
+        """
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 
     if bert:
 
-        model_file_path = (data_path + "/models/" + bert_model_file_name)
+        model_file_path = (data_path + "/models/" + model_file_name)
 
         model_loaded = models.load_model(model_file_path)
 
@@ -483,8 +508,8 @@ if use_model:
         logger.info("feature matrix test")
 
         if small_model:
-            X_test = [np.array(idx, dtype='int32')]
-            #X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32')]
+            #X_test = [np.array(idx, dtype='int32')]
+            X_test = [np.array(idx, dtype='int32'), np.array(masks, dtype='int32')]
 
         else:
             ## generate segments
@@ -507,6 +532,8 @@ if use_model:
         y_test = dtf[label_field].values
         predicted_bin = np.array([np.argmax(pred) for pred in predicted_prob])
 
+    now = time.asctime()
+
     try:
         journal = dtf["Journal"].tolist()
     except:
@@ -520,7 +547,8 @@ if use_model:
     except:
         WOS_ID = [None for i in range(len(dtf))]
 
-    results_df = pd.DataFrame({"Input_data": [input_file_name for i in predicted],
+    results_df = pd.DataFrame({"time": [now for i in predicted],
+                               "input_data": [input_file_name for i in predicted],
                                "model_file_name": [model_file_name for i in predicted],
                                "journal": journal,
                                "pubyear": pubyear,
@@ -645,6 +673,7 @@ else:
 
         if train_on_all:
             dtf_train = dtf.copy()
+            dtf_test = dtf_train.copy()
 
         #balanbce dataset
         logger.info("BALANCE TRAINING SET")
@@ -819,7 +848,7 @@ else:
                                 model["classifier"].fit(X_train_new2, y_train_new)
 
                                 if save_model:
-                                    model_file_path = (data_path + "/models/" + tfidf_model_file_name + ".pkl")
+                                    model_file_path = (data_path + "/models/" + model_file_name + ".pkl")
                                     with open(model_file_path, 'wb') as file:
                                         pickle.dump(model, file)
 
@@ -884,31 +913,29 @@ else:
 
 
                                 ### EVALUATION
-                                if __name__ == "__main__":
-                                    result_fct = fcts.evaluate(classes=classes,
-                                                               # y_test = y_test,
-                                                               y_test_bin=y_test_bin,
-                                                               # predicted = predicted,
-                                                               predicted_bin=predicted_bin,
-                                                               predicted_prob=predicted_prob)
+                                result_fct = fcts.evaluate(classes=classes,
+                                                           # y_test = y_test,
+                                                           y_test_bin=y_test_bin,
+                                                           # predicted = predicted,
+                                                           predicted_bin=predicted_bin,
+                                                           predicted_prob=predicted_prob)
 
-                                    result = pd.concat([result_all, result_fct, result_tfidf], axis=1)
+                                result = pd.concat([result_all, result_fct, result_tfidf], axis=1)
 
-                                    logger.info("RESULT DETAILS:")
-                                    logger.info(result)
+                                logger.info("RESULT DETAILS:")
+                                logger.info(result)
 
                                 if save_results:
                                     logger.info("SAVING RESULTS")
 
-                                    if __name__ == "__main__":
-                                        results, pred_prob_df = fcts.save_results(data_path=data_path,
-                                                                                  results_file_name=results_file_name,
-                                                                                  result=result,
-                                                                                  dtf_test=dtf_test,
-                                                                                  trainingset_id=trainingset_id,
-                                                                                  result_id=result_id,
-                                                                                  predicted_prob=predicted_prob,
-                                                                                  y_test_bin=y_test_bin)
+                                    results, pred_prob_df = fcts.save_results(data_path=data_path,
+                                                                              results_file_name=results_file_name,
+                                                                              result=result,
+                                                                              dtf_test=dtf_test,
+                                                                              trainingset_id=trainingset_id,
+                                                                              result_id=result_id,
+                                                                              predicted_prob=predicted_prob,
+                                                                              y_test_bin=y_test_bin)
 
 
                                 words = vectorizer_new.get_feature_names()
@@ -942,12 +969,12 @@ else:
 
                                     weights_list = [catch(weights_loaded_dict, w) for w in dtf_corpus.index.tolist()]
                                     dtf_weights = dtf_weights.append(pd.DataFrame({"words": dtf_corpus.index.tolist(),
-                                                                                   "counts": dtf_corpus.values.tolist(),
+                                                                                   "prediction": [prediction for i in weights_list],
                                                                                    "weights": weights_list,
-                                                                                   "prediction": [prediction for i in weights_list]})).copy()
+                                                                                   "counts": dtf_corpus.values.tolist()})).copy()
 
                                 dtf_weights["weighted_counts"] = dtf_weights["counts"] * dtf_weights["weights"]
-                                dtf_weights.to_csv(data_path + "/weights/" + tfidf_model_file_name + "_tfidf_weights.csv", index=False)
+                                dtf_weights.to_csv(data_path + "/weights/" + model_file_name + "_tfidf_weights.csv", index=False)
 
 
 
@@ -1254,7 +1281,7 @@ else:
                                                 training = model.fit(x=X_train_new, y=y_train_bin, batch_size=w2v_batch_size, epochs=num_epochs_for_classification, shuffle=True, verbose=0, validation_split=0.3, workers=cores)
 
                                                 if save_model:
-                                                    model_file_path = (data_path + "/models/" + w2v_model_file_name)
+                                                    model_file_path = (data_path + "/models/" + model_file_name)
                                                     model.save(model_file_path)
 
                                                 class_time_total = time.perf_counter() - class_time_start
@@ -1327,42 +1354,45 @@ else:
                                                 classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
 
                                                 ### EVALUATION
-                                                if __name__ == "__main__":
-                                                    result_fct = fcts.evaluate(classes=classes,
-                                                                               # y_test = y_test,
-                                                                               y_test_bin=y_test_bin,
-                                                                               # predicted = predicted,
-                                                                               predicted_bin=predicted_bin,
-                                                                               predicted_prob=predicted_prob)
+                                                result_fct = fcts.evaluate(classes=classes,
+                                                                           # y_test = y_test,
+                                                                           y_test_bin=y_test_bin,
+                                                                           # predicted = predicted,
+                                                                           predicted_bin=predicted_bin,
+                                                                           predicted_prob=predicted_prob)
 
-                                                    result = pd.concat([result_all, result_fct, result_w2v], axis=1)
+                                                result = pd.concat([result_all, result_fct, result_w2v], axis=1)
 
-                                                    logger.info("RESULT DETAILS:")
-                                                    logger.info(result)
+                                                logger.info("RESULT DETAILS:")
+                                                logger.info(result)
 
                                                 if save_results:
                                                     logger.info("SAVING RESULTS")
 
-                                                    if __name__ == "__main__":
-                                                        results, pred_prob_df = fcts.save_results(data_path=data_path,
-                                                                                                  results_file_name=results_file_name,
-                                                                                                  result=result,
-                                                                                                  dtf_test=dtf_test,
-                                                                                                  trainingset_id=trainingset_id,
-                                                                                                  result_id=result_id,
-                                                                                                  predicted_prob=predicted_prob,
-                                                                                                  y_test_bin=y_test_bin)
+                                                    results, pred_prob_df = fcts.save_results(data_path=data_path,
+                                                                                              results_file_name=results_file_name,
+                                                                                              result=result,
+                                                                                              dtf_test=dtf_test,
+                                                                                              trainingset_id=trainingset_id,
+                                                                                              result_id=result_id,
+                                                                                              predicted_prob=predicted_prob,
+                                                                                              y_test_bin=y_test_bin)
 
-
-
+                                                """
                                                 predicted_prob = model.predict(X_train_new)
                                                 predicted_bin_train = np.array([np.argmax(pred) for pred in predicted_prob])
 
-
+                                                
                                                 layer = [layer for layer in model.layers if "attention" in layer.name][0]
                                                 func = K.function([model.input], [layer.output])
-                                                weights = func(X_train_new)[0]
-                                                weights = np.mean(weights, axis=2)
+
+                                                weights = np.zeros((len(X_train_new), max_length_of_document_vector_w2v))
+                                                for i in range(0, len(X_train_new), 2500):
+                                                    weight = func(X_train_new[i:i+2500])[0]
+                                                    weight = np.mean(weight, axis=2)
+                                                    weights[i:i+2500] = weight
+
+
 
                                                 #weights = np.mean(weights, axis=2).flatten()
 
@@ -1383,8 +1413,44 @@ else:
                                                     dtf_weights = dtf_weights.append(pd.DataFrame({"words": words, "weights": weights_loop, "prediction": [prediction for i in words]})).copy()
                                                 dtf_weights = dtf_weights.groupby(["words","prediction"]).mean().copy()
 
-                                                dtf_weights.to_csv(data_path + "/weights/" + w2v_model_file_name + "_w2v_weights.csv")
+                                                dtf_weights.to_csv(data_path + "/weights/" + model_file_name + "_w2v_weights.csv")
+                                                """
 
+
+
+                                                """
+                                                layer = [layer for layer in model.layers if "attention" in layer.name][0]
+                                                func = K.function([model.input], [layer.output])
+
+                                                weights = np.zeros((len(X_test), max_length_of_document_vector_w2v))
+                                                for i in range(0, len(X_test), 2500):
+                                                    weight = func(X_test[i:i + 2500])[0]
+                                                    weight = np.mean(weight, axis=2)
+                                                    weights[i:i + 2500] = weight
+
+                                                # weights = np.mean(weights, axis=2).flatten()
+
+                                                ### 3. rescale weights, remove null vector, map word-weight
+                                                weights = [preprocessing.MinMaxScaler(feature_range=(0, 1)).fit_transform(np.array(i).reshape(-1, 1)).reshape(-1) for i in weights]
+
+                                                inv_word_dic = {v: k for k, v in tokenizer.word_index.items()}
+
+                                                dtf_weights_long = pd.DataFrame()
+                                                for prediction in range(2):
+                                                    idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
+                                                    weights_loop = [weights[i] for i in idx]
+                                                    weights_loop = [i for s in weights for i in s]
+                                                    words = [X_test[i] for i in idx]
+                                                    words = [i for s in words for i in s]
+                                                    weights_loop = [weights_loop[n] for n, idx in enumerate(words) if idx > 1]
+                                                    words = [inv_word_dic[i] for i in words if i > 1]
+                                                    dtf_weights_long = dtf_weights_long.append(pd.DataFrame({"words": words, "weights": weights_loop, "prediction": [prediction for i in words]})).copy()
+                                                dtf_weights = dtf_weights_long.groupby(["words", "prediction"]).mean().copy()
+                                                dtf_weights["count"] = dtf_weights_long.groupby(["words", "prediction"]).count()["weights"].to_list()
+
+
+                                                dtf_weights.to_csv(data_path + "/weights/" + model_file_name + "_w2v_weights.csv")
+                                                """
 
 
 
@@ -1520,7 +1586,7 @@ else:
                                 config.output_hidden_states = False
 
                                 nlp = transformers.TFDistilBertModel.from_pretrained('distilbert-base-uncased', config=config)
-                                bert_out = nlp(idx, attention_mask=masks)[0]
+                                bert_out = nlp.distilbert(idx, attention_mask=masks)[0]
 
                                 ## fine-tuning
                                 x = layers.GlobalAveragePooling1D()(bert_out)
@@ -1679,8 +1745,8 @@ else:
                                     model.fit(x=X_train_new, y=y_train_bin, batch_size=bert_batch_size, epochs=bert_epochs, shuffle=True, verbose=1, validation_split=0.3)
 
                                     if save_model:
-                                        model_file_path = str(data_path + "/models/" + bert_model_file_name)
-                                        saving = model.save_weights(model_file_path)
+                                        model_file_path = str(data_path + "/models/" + model_file_name)
+                                        saving = model.save(model_file_path)
 
                                     class_time_total = time.perf_counter() - class_time_start
                                     logger.info(f"classification with {bert_epochs} epochs batch size {bert_batch_size} for {len(dtf)} samples in {class_time_total} seconds")
@@ -1728,31 +1794,29 @@ else:
 
 
                                     ### EVALUATION
-                                    if __name__ == "__main__":
-                                        result_fct = fcts.evaluate(classes = classes,
-                                                                     #y_test = y_test,
-                                                                     y_test_bin = y_test_bin,
-                                                                     #predicted = predicted,
-                                                                     predicted_bin = predicted_bin,
-                                                                     predicted_prob = predicted_prob)
+                                    result_fct = fcts.evaluate(classes = classes,
+                                                                 #y_test = y_test,
+                                                                 y_test_bin = y_test_bin,
+                                                                 #predicted = predicted,
+                                                                 predicted_bin = predicted_bin,
+                                                                 predicted_prob = predicted_prob)
 
-                                        result = pd.concat([result_all, result_fct, result_bert], axis = 1)
+                                    result = pd.concat([result_all, result_fct, result_bert], axis = 1)
 
-                                        logger.info("RESULT DETAILS:")
-                                        logger.info(result)
+                                    logger.info("RESULT DETAILS:")
+                                    logger.info(result)
 
                                     if save_results:
                                         logger.info("SAVING RESULTS")
 
-                                        if __name__ == "__main__":
-                                            results, pred_prob_df = fcts.save_results(data_path=data_path,
-                                                                                     results_file_name=results_file_name,
-                                                                                     result=result,
-                                                                                     dtf_test=dtf_test,
-                                                                                     trainingset_id=trainingset_id,
-                                                                                     result_id=result_id,
-                                                                                     predicted_prob=predicted_prob,
-                                                                                     y_test_bin=y_test_bin)
+                                        results, pred_prob_df = fcts.save_results(data_path=data_path,
+                                                                                 results_file_name=results_file_name,
+                                                                                 result=result,
+                                                                                 dtf_test=dtf_test,
+                                                                                 trainingset_id=trainingset_id,
+                                                                                 result_id=result_id,
+                                                                                 predicted_prob=predicted_prob,
+                                                                                 y_test_bin=y_test_bin)
 
 
 

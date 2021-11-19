@@ -191,6 +191,16 @@ def evaluate(classes,
     Precision_Positive = TP / (FP + TP)
     Recall_Negative = TN / (FP + TN)
     Recall_Positive = TP / (FN + TP)
+    F1_Score = 2*((Precision_Positive*Recall_Positive)/(Precision_Positive+Recall_Positive))
+    if Support_Negative == 0:
+        Label = "1heterodox"
+        Recall = Recall_Positive
+    elif Support_Positive == 0:
+        Label = "0orthodox"
+        Recall = Recall_Negative
+    else:
+        Label = None
+        Recall = None
     AUC = auc
     AUC_PR = auc_pr
     MCC = mcc
@@ -202,6 +212,7 @@ def evaluate(classes,
 
     result_fct = pd.DataFrame({"Negative_Label": [Negative_Label],
                                "Positive_Label": [Positive_Label],
+                               "Label": [Label],
                                "Support_Negative": [Support_Negative],
                                "Support_Positive": [Support_Positive],
                                "TN": [TN],
@@ -212,6 +223,8 @@ def evaluate(classes,
                                "Precision_Positive": [Precision_Positive],
                                "Recall_Negative": [Recall_Negative],
                                "Recall_Positive": [Recall_Positive],
+                               "Recall": [Recall],
+                               "F1_Score": [F1_Score],
                                "AUC": [AUC],
                                "AUC_PR": [AUC_PR],
                                "MCC": [MCC],
@@ -353,7 +366,8 @@ def utils_preprocess_text(text,
     lst_stopwords.extend(subtitles)
 
     ## clean (convert to lowercase and remove punctuations and characters and then strip)
-    text = re.sub(r'[^\w\s\d]', ' ', str(text[:-remove_last_n]).lower().strip())
+    text = re.sub(r'[^\w\s]', ' ', str(text[:-remove_last_n]).lower().strip())
+    text = re.sub(r'[0-9]+', '', text)
 
     ## Tokenize (convert from string to list)
     lst_text = text.split()

@@ -63,4 +63,4 @@ def combine_csv(input_names = ["combined_WOS_clarivate_lee_orthodox_samequality.
     df.to_csv(str(data_path + "/" + output_name), index = False)
 
 combined_file_path = combine_all_excel_in_folder()
-#combine_csv(input_names = [combined_file_path])
+combine_csv(input_names = [combined_file_path])
