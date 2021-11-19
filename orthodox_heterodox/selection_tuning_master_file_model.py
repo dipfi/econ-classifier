@@ -112,12 +112,18 @@ save_results = True
 results_file_name = False
 
 save_model = True
-use_model = True
-
-model_file_name = False
+use_model = False
 
 
 train_on_all = True
+test_size = 0.1 #suggestion: 0.1
+training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
+
+save_training_samples=False
+use_training_samples=True
+
+model_file_name = False
+
 use_reproducible_train_test_split = False
 train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9_1000"
 test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1_1000"
@@ -127,12 +133,9 @@ num_journals = "all" #3 #"all"
 random_journals = False
 journal_list = [i for i in range(70,78)] #False # [65,1]
 
-test_size = 0.1 #suggestion: 0.1
-training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
-
 
 #TFIDF only
-tfidf = False
+tfidf = True
 max_features_list = [30000] #[1000, 5000, 10000]
 p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
@@ -160,7 +163,7 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = True
+bert = False
 small_model_list = [True]
 bert_batch_size_list = [64] #suggestion 64
 bert_epochs_list = [1]
@@ -557,7 +560,7 @@ if use_model:
                                "predicted_bin": predicted_bin,
                                "predicted_prob": predicted_prob[:, 1]})
 
-    results_path = data_path + "/results/" + str(results_file_name) + ".csv"
+    results_path = data_path + "/results/input_" + input_file_name + "_model_" + model_file_name + "_results.csv"
 
     if save_results:
         results_df.to_csv(results_path, index=False)
@@ -699,6 +702,25 @@ else:
             y_train = pd.DataFrame({"y": dtf_train[label_field]})
             X_train_raw = pd.DataFrame({"X": X_train["X_raw"].tolist()})
             X_train = pd.DataFrame({"X": X_train["X"].tolist()})
+
+
+        training_samples_file_path = (data_path + "/models/" + model_file_name + "_training_samples.csv")
+
+        if use_training_samples:
+            training_samples = pd.read_csv(training_samples_file_path)
+
+            X_train_ids = training_samples["X_train_ids"].tolist()
+            y_train = pd.DataFrame({"y": training_samples["y_train"].tolist()})
+            X_train_raw = pd.DataFrame({"X": training_samples["X_train_raw"].tolist()})
+            X_train = pd.DataFrame({"X": training_samples["X_train"].tolist()})
+
+        if save_training_samples and save_model and not use_training_samples:
+            training_samples = pd.DataFrame({"X_train": X_train["X"],
+                                             "X_train_raw": X_train_raw["X"],
+                                             "X_train_ids": X_train_ids,
+                                             "y_train": y_train["y"]})
+
+            training_samples.to_csv(training_samples_file_path, index=False)
 
         X_train_series = X_train.squeeze(axis=1)
         X_train_raw_series = X_train_raw.squeeze(axis=1)

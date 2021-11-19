@@ -42,8 +42,7 @@ def load_data(data_path,
         logger.info("input_file_type is not CSV")
 
     if sample_size != "all":
-        sample_fraction = sample_size / len(dtf)
-        dtf = dtf.sample(frac=sample_fraction).copy()
+        dtf = dtf.sample(sample_size).copy()
 
     logger.info("Data loaded")
     return dtf
