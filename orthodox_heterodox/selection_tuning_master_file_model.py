@@ -111,18 +111,18 @@ plot = 0 #0 = none, 1 = some, 2 = all
 save_results = True
 results_file_name = False
 
-save_model = True
 use_model = False
+save_model = True
+model_file_name = False
 
+save_weights = True
+
+use_training_samples=True
+save_training_samples=False
 
 train_on_all = True
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
-
-save_training_samples=False
-use_training_samples=True
-
-model_file_name = False
 
 use_reproducible_train_test_split = False
 train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9_1000"
@@ -305,48 +305,47 @@ if use_model:
         with open(model_file_path, 'rb') as file:
             model_loaded = pickle.load(file)
 
+        logger.info("TEST CALC")
         predicted = model_loaded.predict(X_test)
         predicted_prob = model_loaded.predict_proba(X_test)
-
-        logger.info("TEST CALC")
         predicted_bin = np.array([np.argmax(pred) for pred in predicted_prob])
         logger.info("TEST CALC FINISHED")
 
+        if save_weights:
+            weights_loaded_path = data_path + "/weights/" + model_file_name + "_tfidf_weights.csv"
 
-        weights_loaded_path = data_path + "/weights/" + model_file_name + "_tfidf_weights.csv"
+            weights_loaded_dtf = pd.read_csv(weights_loaded_path)
+            weights_loaded_dict = {k: v for k, v in zip(weights_loaded_dtf["words"], weights_loaded_dtf["weights"])}
 
-        weights_loaded_dtf = pd.read_csv(weights_loaded_path)
-        weights_loaded_dict = {k: v for k, v in zip(weights_loaded_dtf["words"], weights_loaded_dtf["weights"])}
+            corpus = dtf[text_field_clean]
+            dtf_weights = pd.DataFrame()
+            for prediction in range(2):
+                idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
+                corpus_loop = corpus[idx]
+                ## create list of n-grams
+                lst_corpus = []
+                for string in corpus_loop:
+                    lst_words = string.split()
+                    lst_grams = [" ".join(lst_words[i:i + 1]) for i in range(0, len(lst_words), 1)]
+                    lst_corpus.append(lst_grams)
 
-        corpus = dtf[text_field_clean]
-        dtf_weights = pd.DataFrame()
-        for prediction in range(2):
-            idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
-            corpus_loop = corpus[idx]
-            ## create list of n-grams
-            lst_corpus = []
-            for string in corpus_loop:
-                lst_words = string.split()
-                lst_grams = [" ".join(lst_words[i:i + 1]) for i in range(0, len(lst_words), 1)]
-                lst_corpus.append(lst_grams)
+                dtf_corpus = pd.DataFrame({"words": [i for l in lst_corpus for i in l]})
+                dtf_corpus = dtf_corpus["words"].value_counts()
 
-            dtf_corpus = pd.DataFrame({"words": [i for l in lst_corpus for i in l]})
-            dtf_corpus = dtf_corpus["words"].value_counts()
+                def catch(dict, w):
+                    try:
+                        return dict[w]
+                    except:
+                        return None
 
-            def catch(dict, w):
-                try:
-                    return dict[w]
-                except:
-                    return None
+                weights_list = [catch(weights_loaded_dict, w) for w in dtf_corpus.index.tolist()]
+                dtf_weights = dtf_weights.append(pd.DataFrame({"words": dtf_corpus.index.tolist(),
+                                                            "counts": dtf_corpus.values.tolist(),
+                                                            "weights": weights_list,
+                                                            "prediction": [prediction for i in weights_list]})).copy()
 
-            weights_list = [catch(weights_loaded_dict, w) for w in dtf_corpus.index.tolist()]
-            dtf_weights = dtf_weights.append(pd.DataFrame({"words": dtf_corpus.index.tolist(),
-                                                        "counts": dtf_corpus.values.tolist(),
-                                                        "weights": weights_list,
-                                                        "prediction": [prediction for i in weights_list]})).copy()
-
-        dtf_weights["weighted_counts"] = dtf_weights["counts"]*dtf_weights["weights"]
-        dtf_weights.to_csv(data_path + "/weights/input_" + input_file_name + "_model_" + model_file_name + "_tfidf_weights.csv", index=False)
+            dtf_weights["weighted_counts"] = dtf_weights["counts"]*dtf_weights["weights"]
+            dtf_weights.to_csv(data_path + "/weights/input_" + input_file_name + "_model_" + model_file_name + "_tfidf_weights.csv", index=False)
 
 
 
@@ -428,22 +427,6 @@ if use_model:
 
         dtf_weights.to_csv(data_path + "/weights/input_" + input_file_name + "_model_" + model_file_name + "_w2v_weights.csv")
         """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -959,44 +942,44 @@ else:
                                                                               predicted_prob=predicted_prob,
                                                                               y_test_bin=y_test_bin)
 
+                                if save_weights:
+                                    words = vectorizer_new.get_feature_names()
+                                    weights = [i for i in model["classifier"].coef_[0]]
+                                    dtf_weights = pd.DataFrame({"words": words, "weights" : weights})
 
-                                words = vectorizer_new.get_feature_names()
-                                weights = [i for i in model["classifier"].coef_[0]]
-                                dtf_weights = pd.DataFrame({"words": words, "weights" : weights})
+                                    weights_loaded_dict = {k: v for k, v in zip(dtf_weights["words"], dtf_weights["weights"])}
 
-                                weights_loaded_dict = {k: v for k, v in zip(dtf_weights["words"], dtf_weights["weights"])}
+                                    corpus = dtf_test[text_field_clean]
+                                    dtf_weights = pd.DataFrame()
+                                    for prediction in range(2):
+                                        idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
+                                        corpus_loop = corpus.iloc[idx]
+                                        ## create list of n-grams
+                                        lst_corpus = []
+                                        for string in corpus_loop:
+                                            lst_words = string.split()
+                                            lst_grams = [" ".join(lst_words[i:i + 1]) for i in range(0, len(lst_words), 1)]
+                                            lst_corpus.append(lst_grams)
 
-                                corpus = dtf_test[text_field_clean]
-                                dtf_weights = pd.DataFrame()
-                                for prediction in range(2):
-                                    idx = [idx for idx, i in enumerate(predicted_bin) if i == prediction]
-                                    corpus_loop = corpus.iloc[idx]
-                                    ## create list of n-grams
-                                    lst_corpus = []
-                                    for string in corpus_loop:
-                                        lst_words = string.split()
-                                        lst_grams = [" ".join(lst_words[i:i + 1]) for i in range(0, len(lst_words), 1)]
-                                        lst_corpus.append(lst_grams)
-
-                                    dtf_corpus = pd.DataFrame({"words": [i for l in lst_corpus for i in l]})
-                                    dtf_corpus = dtf_corpus["words"].value_counts()
-
-
-                                    def catch(dict, w):
-                                        try:
-                                            return dict[w]
-                                        except:
-                                            return None
+                                        dtf_corpus = pd.DataFrame({"words": [i for l in lst_corpus for i in l]})
+                                        dtf_corpus = dtf_corpus["words"].value_counts()
 
 
-                                    weights_list = [catch(weights_loaded_dict, w) for w in dtf_corpus.index.tolist()]
-                                    dtf_weights = dtf_weights.append(pd.DataFrame({"words": dtf_corpus.index.tolist(),
-                                                                                   "prediction": [prediction for i in weights_list],
-                                                                                   "weights": weights_list,
-                                                                                   "counts": dtf_corpus.values.tolist()})).copy()
+                                        def catch(dict, w):
+                                            try:
+                                                return dict[w]
+                                            except:
+                                                return None
 
-                                dtf_weights["weighted_counts"] = dtf_weights["counts"] * dtf_weights["weights"]
-                                dtf_weights.to_csv(data_path + "/weights/" + model_file_name + "_tfidf_weights.csv", index=False)
+
+                                        weights_list = [catch(weights_loaded_dict, w) for w in dtf_corpus.index.tolist()]
+                                        dtf_weights = dtf_weights.append(pd.DataFrame({"words": dtf_corpus.index.tolist(),
+                                                                                       "prediction": [prediction for i in weights_list],
+                                                                                       "weights": weights_list,
+                                                                                       "counts": dtf_corpus.values.tolist()})).copy()
+
+                                    dtf_weights["weighted_counts"] = dtf_weights["counts"] * dtf_weights["weights"]
+                                    dtf_weights.to_csv(data_path + "/weights/" + model_file_name + "_tfidf_weights.csv", index=False)
 
 
 
