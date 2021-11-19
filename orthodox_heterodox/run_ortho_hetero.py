@@ -78,7 +78,7 @@ input_file_name = "WOS_lee_heterodox_und_samequality_new"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
 output_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed"
-sample_size = 1000 #"all" #"all"  #input_file_size #10000 #"all"
+sample_size = "all" #"all"  #input_file_size #10000 #"all"
 text_field = "Abstract"  # "title" #"abstract"
 label_field = "labels"
 #remove_last_n = 50 #remove 45 for elsevier copyright
@@ -139,11 +139,13 @@ def main():
                          sample_size=sample_size)
     # logger.info("Data Short Head:\n" + str(dtf.head()) + "\n")
 
+    """
     if save == True:
         fcts.save_data_csv(dtf=dtf,
                            data_path=data_path,
                            output_file_name=input_file_name,
                            sample_size=sample_size)
+    """
 
     dtf = fcts.rename_fields(dtf=dtf,
                              text_field=text_field,

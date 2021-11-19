@@ -43,8 +43,8 @@ def combine_all_excel_in_folder(folder_name = "WOS_clarivate_top5",
     df.to_csv(combined_file_path, index = False)
     return combined_file_path
 
-def combine_csv(input_names = ["combined_WOS_clarivate_lee_orthodox_samequality.csv",
-                                  "combined_WOS_clarivate_lee_heterodox.csv"],
+def combine_csv(input_names = ["combined_WOS_clarivate_lee_orthodox_samequality_new.csv",
+                                  "combined_WOS_clarivate_lee_heterodox_new.csv"],
                    labels = ["0samequality",
                                 "1heterodox"],
                    output_name = "WOS_lee_heterodox_und_samequality_new.csv",
@@ -62,5 +62,9 @@ def combine_csv(input_names = ["combined_WOS_clarivate_lee_orthodox_samequality.
 
     df.to_csv(str(data_path + "/" + output_name), index = False)
 
-combined_file_path = combine_all_excel_in_folder()
-combine_csv(input_names = [combined_file_path])
+"""
+combine_all_excel_in_folder(folder_name = "WOS_clarivate_lee_orthodox_samequality",
+                          files_path = "/WOS_clarivate_lee_orthodox_samequality/data")
+"""
+
+combine_csv()

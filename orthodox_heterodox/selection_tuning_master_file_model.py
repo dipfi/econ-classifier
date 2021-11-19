@@ -111,7 +111,7 @@ plot = 0 #0 = none, 1 = some, 2 = all
 save_results = True
 results_file_name = False
 
-use_model = False
+use_model = True
 save_model = True
 model_file_name = False
 
@@ -135,14 +135,14 @@ journal_list = [i for i in range(70,78)] #False # [65,1]
 
 
 #TFIDF only
-tfidf = True
+tfidf = False
 max_features_list = [30000] #[1000, 5000, 10000]
 p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
 tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
 
 #w2v only
-w2v = False
+w2v = True
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
 #which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
@@ -543,7 +543,7 @@ if use_model:
                                "predicted_bin": predicted_bin,
                                "predicted_prob": predicted_prob[:, 1]})
 
-    results_path = data_path + "/results/input_" + input_file_name + "_model_" + model_file_name + "_results.csv"
+    results_path = data_path + "/results/input_" + input_file_name + "_model_" + model_file_name + "_results_from_existing_model.csv"
 
     if save_results:
         results_df.to_csv(results_path, index=False)
@@ -687,7 +687,7 @@ else:
             X_train = pd.DataFrame({"X": X_train["X"].tolist()})
 
 
-        training_samples_file_path = (data_path + "/models/" + model_file_name + "_training_samples.csv")
+        training_samples_file_path = (data_path + "/models/" + input_file_name + "_training_samples.csv")
 
         if use_training_samples:
             training_samples = pd.read_csv(training_samples_file_path)
