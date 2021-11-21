@@ -145,7 +145,7 @@ tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegress
 w2v = False
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
-#which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
+which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_10_window_8_embed_False" #specify model to use here
 embedding_folder = "embeddings"
 train_new = True #if True new embeddings are trained
 
@@ -385,9 +385,40 @@ if use_model:
         ## text to sequence with the fitted tokenizer
         lst_text2seq = tokenizer.texts_to_sequences(lst_corpus)
 
+
+        #load embeddings
+        if which_embeddings == False:
+            pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
+        else:
+            pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + which_embeddings
+
+        nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
+
+
         ## padding sequence
         max_length_of_document_vector_w2v = max_length_of_document_vector_w2v_list[0]
         X_test = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector_w2v, padding="post", truncating="post")
+
+        ## start the matrix (length of vocabulary x vector size) with all 0s
+        embeddings = np.zeros((len(dic_vocabulary) + 1, embedding_vector_length))
+
+        if use_gigaword:
+            for word, idx in dic_vocabulary.items():
+                ## update the row with vector
+                try:
+                    embeddings[idx] = nlp[word]
+                ## if word not in model then skip and the row stays all 0s
+                except:
+                    pass
+
+        else:
+            for word, idx in dic_vocabulary.items():
+                ## update the row with vector
+                try:
+                    embeddings[idx] = nlp.wv[word]
+                ## if word not in model then skip and the row stays all 0s
+                except:
+                    pass
 
 
         predicted_prob = model_loaded.predict(X_test)
@@ -541,7 +572,7 @@ if use_model:
                                "predicted_bin": predicted_bin,
                                "predicted_prob": predicted_prob[:, 1]})
 
-    results_path = data_path + "/results/input_" + input_file_name + "_model_" + model_file_name + "_results_from_existing_model.csv"
+    results_path = data_path + "/results/" + results_file_name + ".csv"
 
     if save_results:
         results_df.to_csv(results_path, index=False)
@@ -1109,7 +1140,10 @@ else:
                                 else:
                                     modelname = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
 
-                                pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
+                                if which_embeddings == False:
+                                    pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
+                                else:
+                                    pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + which_embeddings
 
                                 nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
 
@@ -1281,7 +1315,7 @@ else:
 
                                                 ## train
                                                 train_start = time.perf_counter()
-                                                training = model.fit(x=X_train_new, y=y_train_bin, batch_size=w2v_batch_size, epochs=num_epochs_for_classification, shuffle=True, verbose=0, validation_split=0.3, workers=cores)
+                                                model.fit(x=X_train_new, y=y_train_bin, batch_size=w2v_batch_size, epochs=num_epochs_for_classification, shuffle=True, verbose=0, validation_split=0.3, workers=cores)
 
                                                 if save_model:
                                                     model_file_path = (data_path + "/models/" + model_file_name)
