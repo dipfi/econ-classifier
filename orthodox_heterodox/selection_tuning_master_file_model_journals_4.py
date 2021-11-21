@@ -112,7 +112,7 @@ save_results = True
 results_file_name = "bert_12_ep_journals_results"
 
 use_model = False
-save_model = True
+save_model = False
 model_file_name = "bert_12_ep_journals_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
 
 save_weights = True
@@ -131,7 +131,7 @@ journal_split = True
 
 num_journals = "all" #3 #"all"
 random_journals = False
-journal_list = [i for i in range(0,3)] #False # [65,1]
+journal_list = [i for i in range(40,43)] #False # [65,1]
 
 
 #TFIDF only
