@@ -101,7 +101,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_1000"
+input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
@@ -109,25 +109,25 @@ cores = mp.cpu_count()  #mp.cpu_count()  #2
 plot = 0 #0 = none, 1 = some, 2 = all
 
 save_results = True
-results_file_name = "bert_12_ep_journals_results"
+results_file_name = False
 
-use_model = False
-save_model = True
-model_file_name = "bert_12_ep_journals_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
+use_model = True
+save_model = False
+model_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_10000_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
 
 save_weights = True
 
 use_training_samples=False
 save_training_samples=False
 
-train_on_all = False
+train_on_all = True
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
 use_reproducible_train_test_split = False
 train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9_1000"
 test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1_1000"
-journal_split = True
+journal_split = False
 
 num_journals = "all" #3 #"all"
 random_journals = False
@@ -142,10 +142,10 @@ ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
 tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
 
 #w2v only
-w2v = False
+w2v = True
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
-which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_10_window_8_embed_False" #specify model to use here
+which_embeddings = "word2vec_numabs_909_embedlen_300_embedepo_10_window_8_embed_False" #specify model to use here
 embedding_folder = "embeddings"
 train_new = True #if True new embeddings are trained
 
@@ -163,7 +163,7 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = True
+bert = False
 small_model_list = [True]
 bert_batch_size_list = [64] #suggestion 64
 bert_epochs_list = [1]
@@ -279,6 +279,7 @@ if model_file_name == False:
 
 
 
+
 if use_model:
 
     '''
@@ -368,9 +369,19 @@ if use_model:
             lst_grams = [" ".join(lst_words[i:i + 1]) for i in range(0, len(lst_words), 1)]
             lst_corpus.append(lst_grams)
 
+
+        """
         tokenizer = kprocessing.text.Tokenizer(lower=True, split=' ', oov_token="NaN", filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
         tokenizer.fit_on_texts(lst_corpus)
         dic_vocabulary = tokenizer.word_index
+        """
+
+        # loading tokenizer
+
+        tokenizer_file_path = (data_path + "/models/" + model_file_name + "_tokenizer.pkl")
+        with open(tokenizer_file_path, 'rb') as file:
+            tokenizer = pickle.load(file)
+
 
         ## detect bigrams and trigrams
         bigrams_detector = gensim.models.phrases.Phrases(lst_corpus, delimiter=' ', min_count=5, threshold=10)
@@ -385,9 +396,19 @@ if use_model:
         ## text to sequence with the fitted tokenizer
         lst_text2seq = tokenizer.texts_to_sequences(lst_corpus)
 
+        ## padding sequence
+        max_length_of_document_vector_w2v = max_length_of_document_vector_w2v_list[0]
+        X_test = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector_w2v, padding="post", truncating="post")
 
+        """
         #load embeddings
         if which_embeddings == False:
+
+            if journal_split:
+                modelname = "word2vec_" + str(test_journal.replace(" ", "_")) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
+            else:
+                modelname = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
+
             pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
         else:
             pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + which_embeddings
@@ -395,11 +416,8 @@ if use_model:
         nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
 
 
-        ## padding sequence
-        max_length_of_document_vector_w2v = max_length_of_document_vector_w2v_list[0]
-        X_test = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector_w2v, padding="post", truncating="post")
-
         ## start the matrix (length of vocabulary x vector size) with all 0s
+        embedding_vector_length = embedding_vector_length_list[0]
         embeddings = np.zeros((len(dic_vocabulary) + 1, embedding_vector_length))
 
         if use_gigaword:
@@ -419,7 +437,7 @@ if use_model:
                 ## if word not in model then skip and the row stays all 0s
                 except:
                     pass
-
+        """
 
         predicted_prob = model_loaded.predict(X_test)
         predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
@@ -1186,6 +1204,10 @@ else:
                                 tokenizer = kprocessing.text.Tokenizer(lower=True, split=' ', oov_token="NaN", filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
                                 tokenizer.fit_on_texts(lst_corpus)
                                 dic_vocabulary = tokenizer.word_index
+
+                                tokenizer_file_path = (data_path + "/models/" + model_file_name + "_tokenizer.pkl")
+                                with open(tokenizer_file_path, 'wb') as file:
+                                    pickle.dump(tokenizer, file, protocol=pickle.HIGHEST_PROTOCOL)
 
                                 logger.info("START CREATING CORPUS")
 
