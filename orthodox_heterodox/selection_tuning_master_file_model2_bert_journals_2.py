@@ -97,7 +97,8 @@ import transformers
 
 
 
-###########################################
+
+############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
 input_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed"
@@ -108,13 +109,13 @@ cores = mp.cpu_count()  #mp.cpu_count()  #2
 plot = 0 #0 = none, 1 = some, 2 = all
 
 save_results = True
-results_file_name = "bert_12_ep_journals_results"
+results_file_name = "BERT_journal_results"
 
 use_model = False
 save_model = False
-model_file_name = "bert_12_ep_journals_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
+model_file_name = "BERT_journal_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
 
-save_weights = True
+save_weights = False
 
 use_training_samples=False
 save_training_samples=False
@@ -123,28 +124,28 @@ train_on_all = False
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
-use_reproducible_train_test_split = False
-train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9_1000"
-test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1_1000"
+use_reproducible_train_test_split = True
+train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9"
+test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
 journal_split = True
 
 num_journals = "all" #3 #"all"
 random_journals = False
-journal_list = [i for i in range(60,63)] #False # [65,1]
+journal_list = [i for i in range(20,30)] #False # [65,1]
 
 
 #TFIDF only
 tfidf = False
-max_features_list = [30000] #[1000, 5000, 10000]
-p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
+min_df_list = [5] #[1000, 5000, 10000]
+p_value_limit_list = [0.0] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
-tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
+tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "RandomForestClassifier","GradientBoostingClassifier", "SVC"]
 
 #w2v only
 w2v = False
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
-#which_embeddings = "word2vec_numabs_79431_embedlen_300_epochs_30" #specify model to use here
+which_embeddings = "word2vec_numabs_909_embedlen_300_embedepo_10_window_8_embed_False" #specify model to use here
 embedding_folder = "embeddings"
 train_new = True #if True new embeddings are trained
 
@@ -165,8 +166,8 @@ w2v_batch_size_list = [256] #suggestion: 256
 bert = True
 small_model_list = [True]
 bert_batch_size_list = [64] #suggestion 64
-bert_epochs_list = [12]
-max_length_of_document_vector_bert_list = [350] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
+bert_epochs_list = [6]
+max_length_of_document_vector_bert_list = [170] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
 classifier_loss_function_bert_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
 use_bert_feature_matrix = False
 save_bert_feature_matrix = False
@@ -192,7 +193,7 @@ bert = """ + str(bert)
 
 if tfidf:
     parameters_tfidf = """PARAMETERS TFIDF:
-    max_features_list = """ + str(max_features_list) + """
+    min_df_list = """ + str(min_df_list) + """
     p_value_limit_list = """ + str(p_value_limit_list) + """
     ngram_range_list = """ + str(ngram_range_list) + """
     tfidf_classifier_list = """ + str(tfidf_classifier_list)
@@ -275,6 +276,7 @@ if model_file_name == False:
         model_file_name = input_file_name + "_w2v_model"
     if bert:
         model_file_name = input_file_name + "_bert_model"
+
 
 
 
@@ -367,9 +369,19 @@ if use_model:
             lst_grams = [" ".join(lst_words[i:i + 1]) for i in range(0, len(lst_words), 1)]
             lst_corpus.append(lst_grams)
 
+
+        """
         tokenizer = kprocessing.text.Tokenizer(lower=True, split=' ', oov_token="NaN", filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
         tokenizer.fit_on_texts(lst_corpus)
         dic_vocabulary = tokenizer.word_index
+        """
+
+        # loading tokenizer
+
+        tokenizer_file_path = (data_path + "/models/" + model_file_name + "_tokenizer.pkl")
+        with open(tokenizer_file_path, 'rb') as file:
+            tokenizer = pickle.load(file)
+
 
         ## detect bigrams and trigrams
         bigrams_detector = gensim.models.phrases.Phrases(lst_corpus, delimiter=' ', min_count=5, threshold=10)
@@ -388,6 +400,44 @@ if use_model:
         max_length_of_document_vector_w2v = max_length_of_document_vector_w2v_list[0]
         X_test = kprocessing.sequence.pad_sequences(lst_text2seq, maxlen=max_length_of_document_vector_w2v, padding="post", truncating="post")
 
+        """
+        #load embeddings
+        if which_embeddings == False:
+
+            if journal_split:
+                modelname = "word2vec_" + str(test_journal.replace(" ", "_")) + "_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
+            else:
+                modelname = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
+
+            pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
+        else:
+            pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + which_embeddings
+
+        nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
+
+
+        ## start the matrix (length of vocabulary x vector size) with all 0s
+        embedding_vector_length = embedding_vector_length_list[0]
+        embeddings = np.zeros((len(dic_vocabulary) + 1, embedding_vector_length))
+
+        if use_gigaword:
+            for word, idx in dic_vocabulary.items():
+                ## update the row with vector
+                try:
+                    embeddings[idx] = nlp[word]
+                ## if word not in model then skip and the row stays all 0s
+                except:
+                    pass
+
+        else:
+            for word, idx in dic_vocabulary.items():
+                ## update the row with vector
+                try:
+                    embeddings[idx] = nlp.wv[word]
+                ## if word not in model then skip and the row stays all 0s
+                except:
+                    pass
+        """
 
         predicted_prob = model_loaded.predict(X_test)
         predicted = [dic_y_mapping[np.argmax(pred)] for pred in predicted_prob]
@@ -446,7 +496,7 @@ if use_model:
 
         X_test_ids = dtf["index"].tolist()
         max_length_of_document_vector_bert = max_length_of_document_vector_bert_list[0]
-        maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
+        maxqnans = np.int((max_length_of_document_vector_bert - 5))# / 2)
 
         text_lst = [text[:-50] for text in dtf[text_field]]
         text_lst = [' '.join(text.split()[:maxqnans]) for text in text_lst]
@@ -518,7 +568,7 @@ if use_model:
     now = time.asctime()
 
     try:
-        journal = dtf["Journal"].tolist()
+        journal = dtf["Journal"].str.lower().tolist()
     except:
         journal = [None for i in range(len(dtf))]
     try:
@@ -529,18 +579,73 @@ if use_model:
         WOS_ID = dtf["UT (Unique WOS ID)"].tolist()
     except:
         WOS_ID = [None for i in range(len(dtf))]
+    try:
+        author = dtf["Author Full Names"].tolist()
+    except:
+        author = [None for i in range(len(dtf))]
+    try:
+        title = dtf["Article Title"].tolist()
+    except:
+        title = [None for i in range(len(dtf))]
+    try:
+        abstract = dtf["Abstract"].tolist()
+    except:
+        abstract = [None for i in range(len(dtf))]
+    try:
+        times_cited = dtf["Times Cited, All Databases"].tolist()
+    except:
+        times_cited = [None for i in range(len(dtf))]
+    try:
+        abstract = dtf[text_field].tolist()
+    except:
+        try:
+            abstract = dtf["Abstract"].tolist()
+        except:
+            abstract = [None for i in range(len(dtf))]
+    try:
+        WOS_category = dtf["WoS Categories"].tolist()
+    except:
+        WOS_category = [None for i in range(len(dtf))]
+    try:
+        research_area = dtf["Research Areas"].tolist()
+    except:
+        research_area = [None for i in range(len(dtf))]
+    try:
+        label = dtf[label_field].tolist()
+    except:
+        try:
+            label = dtf["labels"].tolist()
+        except:
+            label = [None for i in range(len(dtf))]
+    try:
+        keywords_author = dtf["Author Keywords"].tolist()
+    except:
+        keywords_author = [None for i in range(len(dtf))]
+    try:
+        keywords_plus = dtf["Keywords Plus"].tolist()
+    except:
+        keywords_plus = [None for i in range(len(dtf))]
 
     results_df = pd.DataFrame({"time": [now for i in predicted],
                                "input_data": [input_file_name for i in predicted],
                                "model_file_name": [model_file_name for i in predicted],
                                "journal": journal,
                                "pubyear": pubyear,
-                               "WOS_ID": WOS_ID,
+                               "author": author,
+                               "times_cited": times_cited,
                                "predicted": predicted,
                                "predicted_bin": predicted_bin,
-                               "predicted_prob": predicted_prob[:, 1]})
+                               "predicted_prob": predicted_prob[:, 1],
+                               "label": label,
+                               "title": title,
+                               "abstract": abstract,
+                               "research_area": research_area,
+                               "WOS_category": WOS_category,
+                               "WOS_ID": WOS_ID,
+                               "keywords_author": keywords_author,
+                               "keywords_plus": keywords_plus})
 
-    results_path = data_path + "/results/input_" + input_file_name + "_model_" + model_file_name + "_results_from_existing_model.csv"
+    results_path = data_path + "/results/" + results_file_name + ".csv"
 
     if save_results:
         results_df.to_csv(results_path, index=False)
@@ -583,6 +688,15 @@ else:
 
 
 
+
+
+
+
+
+
+
+#######################################################################3
+
     '''
     TRAIN TEST SPLIT
     '''
@@ -593,6 +707,8 @@ else:
     if journal_split:
 
         all_journals = dtf[["Journal", label_field]].drop_duplicates().copy()
+        all_journals["Journal"] = all_journals["Journal"].str.lower().copy()
+        all_journals = all_journals.drop_duplicates().copy()
 
         if random_journals:
             all_journals = all_journals.sample(frac = 1).copy()
@@ -606,6 +722,7 @@ else:
     else:
         all_journals = pd.DataFrame({"Journal": ["randmom"], label_field: ["random"]})
         test_journal = None
+        test_label = None
 
 
 
@@ -631,15 +748,15 @@ else:
 
         if journal_split == True:
 
-            label = all_test[label_field]
+            test_label = all_test[label_field]
 
             test_journal = all_test["Journal"]
 
             logger.info("Journal = " + str(test_journal))
-            logger.info("Label = " + str(label))
+            logger.info("Label = " + str(test_label))
 
-            dtf_train = dtf.loc[dtf["Journal"] != test_journal].copy()
-            dtf_test = dtf.loc[dtf["Journal"] == test_journal].copy()
+            dtf_train = dtf.loc[dtf["Journal"].str.lower() != test_journal].copy()
+            dtf_test = dtf.loc[dtf["Journal"].str.lower() == test_journal].copy()
 
             training_set_id = ''.join(test_journal.split()) + str(int(time.time()*1000))
 
@@ -648,6 +765,8 @@ else:
                 dtf_train = pd.read_csv(data_path + "/" + train_set_name + ".csv")
                 dtf_test = pd.read_csv(data_path + "/" + test_set_name + ".csv")
                 training_set_id = "use_reproducible_train_test_split"
+                dtf_train["index"] = np.arange(dtf_train.shape[0])
+                dtf_test["index"] = np.arange(dtf_test.shape[0])
 
             else:
                 dtf_train, dtf_test = model_selection.train_test_split(dtf, test_size = test_size, random_state=42)
@@ -743,6 +862,12 @@ else:
 
         for current_model in models_list:
 
+
+
+
+
+##########################################################################
+
             if current_model == "tfidf":
 
                 #TFIDF
@@ -767,10 +892,10 @@ else:
                     elif tfidf_classifier == "GradientBoostingClassifier":
                         classifier = ensemble.GradientBoostingClassifier()
 
-                    loop_max_features = 0
-                    for max_features in max_features_list:
+                    loop_min_df = 0
+                    for min_df in min_df_list:
 
-                        loop_max_features += 1
+                        loop_min_df += 1
                         loop_ngram_range = 0
 
                         for ngram_range in ngram_range_list:
@@ -783,8 +908,8 @@ else:
 
                                 logger.info("Loop tfidf_classifier Nr.: " + str(loop_tfidf_classifier))
                                 logger.info("tfidf_classifier: " + str(tfidf_classifier))
-                                logger.info("Loop max_features Nr: " + str(loop_max_features))
-                                logger.info("Loop max_features: " + str(max_features))
+                                logger.info("Loop min_df Nr: " + str(loop_min_df))
+                                logger.info("Loop min_df: " + str(min_df))
                                 logger.info("Loop ngram_range Nr: " + str(loop_ngram_range))
                                 logger.info("Loop ngram_range: " + str(ngram_range))
                                 logger.info("Loop p_value_limit Nr: " + str(loop_p_value_limit))
@@ -792,21 +917,24 @@ else:
 
                                 class_time_start = time.perf_counter()
 
-                                vectorizer = feature_extraction.text.TfidfVectorizer(max_features=max_features, ngram_range=ngram_range)
+                                vectorizer = feature_extraction.text.TfidfVectorizer(min_df=min_df, ngram_range=ngram_range)
 
-                                corpus = X_train["X"]
+                                X_train_unbalanced = X_train[0:len(dtf_train)]
+                                y_train_unbalanced = y_train[0:len(dtf_train)]
 
-                                vectorizer.fit(corpus)
-                                X_train_new = vectorizer.transform(corpus)
+                                corpus_unbalanced = X_train_unbalanced["X"]
+
+                                vectorizer.fit(corpus_unbalanced)
+                                X_train_new_unbalanced = vectorizer.transform(corpus_unbalanced)
                                 dic_vocabulary = vectorizer.vocabulary_
 
                                 if plot == 2:
-                                    sns.heatmap(X_train_new.todense()[:, np.random.randint(0, X_train_new.shape[1], 100)] == 0, vmin=0, vmax=1, cbar=False).set_title('Sparse Matrix Sample')
+                                    sns.heatmap(X_train_new_unbalanced.todense()[:, np.random.randint(0, X_train_new_unbalanced.shape[1], 100)] == 0, vmin=0, vmax=1, cbar=False).set_title('Sparse Matrix Sample')
 
                                 # FEATURE SELECTION
                                 logger.info("FEATURE SELECTION")
-                                y = y_train
-                                X_names = vectorizer.get_feature_names()
+                                y = y_train_unbalanced
+                                X_names_unbalanced = vectorizer.get_feature_names()
 
 
 
@@ -814,23 +942,25 @@ else:
                                 dtf_features = pd.DataFrame()
                                 for cat in np.unique(y):
                                     logger.info("cat: " + str(cat))
-                                    chi2, p = feature_selection.chi2(X_train_new, y == cat)
-                                    dtf_features = dtf_features.append(pd.DataFrame({"feature": X_names, "score": 1 - p, "y": cat}))
+                                    chi2, p = feature_selection.chi2(X_train_new_unbalanced, y == cat)
+                                    dtf_features = dtf_features.append(pd.DataFrame({"feature": X_names_unbalanced, "score": 1 - p, "y": cat}))
                                     dtf_features = dtf_features.sort_values([label_field, "score"], ascending=[True, False])
                                     dtf_features = dtf_features[dtf_features["score"] > p_value_limit]
 
-                                X_names_new = dtf_features["feature"].unique().tolist()
+                                X_names_new_unbalanced = dtf_features["feature"].unique().tolist()
 
                                 # shorter
                                 logger.info("SHORTENING VOCABULARY")
 
-                                if len(X_names_new) > 0:
-                                    vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names_new)
+                                if len(X_names_new_unbalanced) > 0:
+                                    vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names_new_unbalanced)
                                 else:
-                                    vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names)
+                                    vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names_unbalanced)
                                     p_value_limit = "no limit"
 
 
+
+                                corpus = X_train["X"]
                                 vectorizer_new.fit(corpus)
                                 X_train_new2 = vectorizer_new.transform(corpus)
                                 dic_vocabulary = vectorizer_new.vocabulary_
@@ -881,7 +1011,7 @@ else:
                                 classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
 
                                 class_time_total = time.perf_counter() - class_time_start
-                                logger.info(f"classification with {max_features} features and ngram_range {ngram_range} for {len(dtf)} samples in {class_time_total} seconds")
+                                logger.info(f"classification with {min_df} features and ngram_range {ngram_range} for {len(dtf)} samples in {class_time_total} seconds")
 
                                 # results allg
                                 now = time.asctime()
@@ -894,6 +1024,7 @@ else:
                                                        "length_training_orig": [len(dtf_train)],
                                                        "length_training_samp": [len(X_train_raw_series)],
                                                        "test_journal": [test_journal],
+                                                       "test_label": [test_label],
                                                        "use_reproducible_train_test_split": [use_reproducible_train_test_split],
                                                        "train_set_name": [train_set_name],
                                                        "test_set_name": [test_set_name],
@@ -904,11 +1035,11 @@ else:
                                                        "current_model": [current_model]})
 
                                 # results tfidf
-                                result_tfidf = pd.DataFrame({"max_features": [max_features],
+                                result_tfidf = pd.DataFrame({"min_df": [min_df],
                                                              "p_value_limit": [p_value_limit],
                                                              "ngram_range": [ngram_range],
                                                              "tfidf_classifier": [tfidf_classifier],
-                                                             "number_relevant_features": [len(X_names_new)]})
+                                                             "number_relevant_features": [len(X_names_new_unbalanced)]})
 
                                 ## test
                                 y_test = dtf_test[label_field].values
@@ -1108,10 +1239,16 @@ else:
                                 else:
                                     modelname = "word2vec_numabs_" + str(len(dtf)) + "_embedlen_" + str(embedding_vector_length) + "_embedepo_" + str(num_epochs_for_embedding) + "_window_" + str(window_size) + "_embed_" + str(embedding_set)
 
-                                pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
+                                if which_embeddings == False:
+                                    pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + modelname
+                                else:
+                                    pretrained_vectors = str(data_path) + "/" + embedding_folder + "/" + which_embeddings
 
                                 nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
 
+
+
+                                '''
                                 word = "bad"
                                 logger.info(str(nlp.wv[word].shape))
                                 logger.info(word + ": " + str(nlp.wv.most_similar(word)))
@@ -1123,6 +1260,7 @@ else:
                                 load_embeddings_end = time.perf_counter()
                                 load_embeddings_time = load_embeddings_end - load_embeddings_start
                                 logger.info(f"loading embeddings in {load_embeddings_time} seconds")
+                                '''
 
                             if train_new:
                                 train_embeddings_start = time.perf_counter()
@@ -1151,6 +1289,10 @@ else:
                                 tokenizer = kprocessing.text.Tokenizer(lower=True, split=' ', oov_token="NaN", filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
                                 tokenizer.fit_on_texts(lst_corpus)
                                 dic_vocabulary = tokenizer.word_index
+
+                                tokenizer_file_path = (data_path + "/models/" + model_file_name + "_tokenizer.pkl")
+                                with open(tokenizer_file_path, 'wb') as file:
+                                    pickle.dump(tokenizer, file, protocol=pickle.HIGHEST_PROTOCOL)
 
                                 logger.info("START CREATING CORPUS")
 
@@ -1280,7 +1422,7 @@ else:
 
                                                 ## train
                                                 train_start = time.perf_counter()
-                                                training = model.fit(x=X_train_new, y=y_train_bin, batch_size=w2v_batch_size, epochs=num_epochs_for_classification, shuffle=True, verbose=0, validation_split=0.3, workers=cores)
+                                                model.fit(x=X_train_new, y=y_train_bin, batch_size=w2v_batch_size, epochs=num_epochs_for_classification, shuffle=True, verbose=0, validation_split=0.3, workers=cores)
 
                                                 if save_model:
                                                     model_file_path = (data_path + "/models/" + model_file_name)
@@ -1300,6 +1442,7 @@ else:
                                                                            "length_training_orig": [len(dtf_train)],
                                                                            "length_training_samp": [len(X_train_raw_series)],
                                                                            "test_journal": [test_journal],
+                                                                           "test_label": [test_label],
                                                                            "use_reproducible_train_test_split": [use_reproducible_train_test_split],
                                                                            "train_set_name": [train_set_name],
                                                                            "test_set_name": [test_set_name],
@@ -1504,7 +1647,7 @@ else:
                         ## add special tokens
                         logger.info("add special tokens")
 
-                        maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
+                        maxqnans = np.int((max_length_of_document_vector_bert - 5)) # / 2)
                         corpus_tokenized = ["[CLS] " +
                                             " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
                                             " [SEP] " for txt in corpus]
@@ -1658,7 +1801,7 @@ else:
 
                             ## add special tokens
                             logger.info("add special tokens test")
-                            maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
+                            maxqnans = np.int((max_length_of_document_vector_bert - 5))# / 2)
                             corpus_tokenized = ["[CLS] " +
                                                 " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
                                                 " [SEP] " for txt in corpus]
@@ -1766,6 +1909,7 @@ else:
                                                                "length_training_orig": [len(dtf_train)],
                                                                "length_training_samp": [len(X_train_raw_series)],
                                                                "test_journal": [test_journal],
+                                                               "test_label": [test_label],
                                                                "use_reproducible_train_test_split": [use_reproducible_train_test_split],
                                                                "train_set_name": [train_set_name],
                                                                "test_set_name": [test_set_name],

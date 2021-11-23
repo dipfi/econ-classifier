@@ -109,11 +109,11 @@ cores = mp.cpu_count()  #mp.cpu_count()  #2
 plot = 0 #0 = none, 1 = some, 2 = all
 
 save_results = True
-results_file_name = "TFIDF_new_results"
+results_file_name = "BERT_journal_results"
 
 use_model = False
 save_model = False
-model_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_10000_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
+model_file_name = "BERT_journal_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
 
 save_weights = False
 
@@ -127,17 +127,17 @@ training_set = "oversample" # "oversample", "undersample", "heterodox", "samequa
 use_reproducible_train_test_split = True
 train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9"
 test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
-journal_split = False
+journal_split = True
 
 num_journals = "all" #3 #"all"
 random_journals = False
-journal_list = [i for i in range(0,3)] #False # [65,1]
+journal_list = [i for i in range(0,10)] #False # [65,1]
 
 
 #TFIDF only
-tfidf = True
-min_df_list = [7] #[1000, 5000, 10000]
-p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
+tfidf = False
+min_df_list = [5] #[1000, 5000, 10000]
+p_value_limit_list = [0.0] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
 tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "RandomForestClassifier","GradientBoostingClassifier", "SVC"]
 
@@ -163,11 +163,11 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = False
+bert = True
 small_model_list = [True]
 bert_batch_size_list = [64] #suggestion 64
-bert_epochs_list = [1]
-max_length_of_document_vector_bert_list = [350] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
+bert_epochs_list = [6]
+max_length_of_document_vector_bert_list = [170] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
 classifier_loss_function_bert_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
 use_bert_feature_matrix = False
 save_bert_feature_matrix = False
