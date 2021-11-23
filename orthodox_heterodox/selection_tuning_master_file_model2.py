@@ -136,8 +136,8 @@ journal_list = [i for i in range(0,3)] #False # [65,1]
 
 #TFIDF only
 tfidf = True
-min_df_list = [2, 3, 4, 5] #[1000, 5000, 10000]
-p_value_limit_list = [0.7, 0.8, 0.9, 0.95, 0.99] #[0.8, 0.9, 0.95]
+min_df_list = [7] #[1000, 5000, 10000]
+p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
 tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "RandomForestClassifier","GradientBoostingClassifier", "SVC"]
 
@@ -707,7 +707,8 @@ else:
     if journal_split:
 
         all_journals = dtf[["Journal", label_field]].drop_duplicates().copy()
-        all_journals["Journal"] = all_journals["Journal"].str.lower()
+        all_journals["Journal"] = all_journals["Journal"].str.lower().copy()
+        all_journals = all_journals.drop_duplicates().copy()
 
         if random_journals:
             all_journals = all_journals.sample(frac = 1).copy()
@@ -918,8 +919,8 @@ else:
 
                                 vectorizer = feature_extraction.text.TfidfVectorizer(min_df=min_df, ngram_range=ngram_range)
 
-                                X_train_unbalanced = X_train[0:len(dtf)]
-                                y_train_unbalanced = y_train[0:len(dtf)]
+                                X_train_unbalanced = X_train[0:len(dtf_train)]
+                                y_train_unbalanced = y_train[0:len(dtf_train)]
 
                                 corpus_unbalanced = X_train_unbalanced["X"]
 
