@@ -136,9 +136,9 @@ journal_list = [i for i in range(0,3)] #False # [65,1]
 
 #TFIDF only
 tfidf = True
-max_features_list = [1000, 10000, 30000] #[1000, 5000, 10000]
-p_value_limit_list = [0.7, 0.8, 0.9] #[0.8, 0.9, 0.95]
-ngram_range_list = [(1,1), (1,3)] #[(1,1), (1,2), (1,3)]
+min_df_list = [2, 3, 4, 5] #[1000, 5000, 10000]
+p_value_limit_list = [0.7, 0.8, 0.9, 0.95, 0.99] #[0.8, 0.9, 0.95]
+ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
 tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "RandomForestClassifier","GradientBoostingClassifier", "SVC"]
 
 #w2v only
@@ -193,7 +193,7 @@ bert = """ + str(bert)
 
 if tfidf:
     parameters_tfidf = """PARAMETERS TFIDF:
-    max_features_list = """ + str(max_features_list) + """
+    min_df_list = """ + str(min_df_list) + """
     p_value_limit_list = """ + str(p_value_limit_list) + """
     ngram_range_list = """ + str(ngram_range_list) + """
     tfidf_classifier_list = """ + str(tfidf_classifier_list)
@@ -861,6 +861,12 @@ else:
 
         for current_model in models_list:
 
+
+
+
+
+##########################################################################
+
             if current_model == "tfidf":
 
                 #TFIDF
@@ -885,10 +891,10 @@ else:
                     elif tfidf_classifier == "GradientBoostingClassifier":
                         classifier = ensemble.GradientBoostingClassifier()
 
-                    loop_max_features = 0
-                    for max_features in max_features_list:
+                    loop_min_df = 0
+                    for min_df in min_df_list:
 
-                        loop_max_features += 1
+                        loop_min_df += 1
                         loop_ngram_range = 0
 
                         for ngram_range in ngram_range_list:
@@ -901,8 +907,8 @@ else:
 
                                 logger.info("Loop tfidf_classifier Nr.: " + str(loop_tfidf_classifier))
                                 logger.info("tfidf_classifier: " + str(tfidf_classifier))
-                                logger.info("Loop max_features Nr: " + str(loop_max_features))
-                                logger.info("Loop max_features: " + str(max_features))
+                                logger.info("Loop min_df Nr: " + str(loop_min_df))
+                                logger.info("Loop min_df: " + str(min_df))
                                 logger.info("Loop ngram_range Nr: " + str(loop_ngram_range))
                                 logger.info("Loop ngram_range: " + str(ngram_range))
                                 logger.info("Loop p_value_limit Nr: " + str(loop_p_value_limit))
@@ -910,7 +916,7 @@ else:
 
                                 class_time_start = time.perf_counter()
 
-                                vectorizer = feature_extraction.text.TfidfVectorizer(max_features=max_features, ngram_range=ngram_range)
+                                vectorizer = feature_extraction.text.TfidfVectorizer(min_df=min_df, ngram_range=ngram_range)
 
                                 X_train_unbalanced = X_train[0:len(dtf)]
                                 y_train_unbalanced = y_train[0:len(dtf)]
@@ -1004,7 +1010,7 @@ else:
                                 classes = np.array([dic_y_mapping[0], dic_y_mapping[1]])
 
                                 class_time_total = time.perf_counter() - class_time_start
-                                logger.info(f"classification with {max_features} features and ngram_range {ngram_range} for {len(dtf)} samples in {class_time_total} seconds")
+                                logger.info(f"classification with {min_df} features and ngram_range {ngram_range} for {len(dtf)} samples in {class_time_total} seconds")
 
                                 # results allg
                                 now = time.asctime()
@@ -1028,7 +1034,7 @@ else:
                                                        "current_model": [current_model]})
 
                                 # results tfidf
-                                result_tfidf = pd.DataFrame({"max_features": [max_features],
+                                result_tfidf = pd.DataFrame({"min_df": [min_df],
                                                              "p_value_limit": [p_value_limit],
                                                              "ngram_range": [ngram_range],
                                                              "tfidf_classifier": [tfidf_classifier],
