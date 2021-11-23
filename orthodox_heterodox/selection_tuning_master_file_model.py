@@ -496,7 +496,7 @@ if use_model:
 
         X_test_ids = dtf["index"].tolist()
         max_length_of_document_vector_bert = max_length_of_document_vector_bert_list[0]
-        maxqnans = np.int((max_length_of_document_vector_bert - 20))# / 2)
+        maxqnans = np.int((max_length_of_document_vector_bert - 5))# / 2)
 
         text_lst = [text[:-50] for text in dtf[text_field]]
         text_lst = [' '.join(text.split()[:maxqnans]) for text in text_lst]
@@ -1620,7 +1620,7 @@ else:
                         ## add special tokens
                         logger.info("add special tokens")
 
-                        maxqnans = np.int((max_length_of_document_vector_bert - 20)) # / 2)
+                        maxqnans = np.int((max_length_of_document_vector_bert - 5)) # / 2)
                         corpus_tokenized = ["[CLS] " +
                                             " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
                                             " [SEP] " for txt in corpus]
@@ -1774,7 +1774,7 @@ else:
 
                             ## add special tokens
                             logger.info("add special tokens test")
-                            maxqnans = np.int((max_length_of_document_vector_bert - 20))# / 2)
+                            maxqnans = np.int((max_length_of_document_vector_bert - 5))# / 2)
                             corpus_tokenized = ["[CLS] " +
                                                 " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
                                                 " [SEP] " for txt in corpus]
