@@ -108,8 +108,8 @@ label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 plot = 0 #0 = none, 1 = some, 2 = all
 
-save_results = False
-results_file_name = False
+save_results = True
+results_file_name = "TFIDF_new_results"
 
 use_model = False
 save_model = False
@@ -120,13 +120,13 @@ save_weights = False
 use_training_samples=False
 save_training_samples=False
 
-train_on_all = True
+train_on_all = False
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
-use_reproducible_train_test_split = False
-train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9_1000"
-test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1_1000"
+use_reproducible_train_test_split = True
+train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9"
+test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
 journal_split = False
 
 num_journals = "all" #3 #"all"
@@ -136,9 +136,9 @@ journal_list = [i for i in range(0,3)] #False # [65,1]
 
 #TFIDF only
 tfidf = True
-max_features_list = [300000] #[1000, 5000, 10000]
-p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
-ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
+max_features_list = [1000, 10000, 30000] #[1000, 5000, 10000]
+p_value_limit_list = [0.7, 0.8, 0.9] #[0.8, 0.9, 0.95]
+ngram_range_list = [(1,1), (1,3)] #[(1,1), (1,2), (1,3)]
 tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "RandomForestClassifier","GradientBoostingClassifier", "SVC"]
 
 #w2v only
@@ -912,20 +912,22 @@ else:
 
                                 vectorizer = feature_extraction.text.TfidfVectorizer(max_features=max_features, ngram_range=ngram_range)
 
-                                
-                                corpus = X_train["X"]
+                                X_train_unbalanced = X_train[0:len(dtf)]
+                                y_train_unbalanced = y_train[0:len(dtf)]
 
-                                vectorizer.fit(corpus)
-                                X_train_new = vectorizer.transform(corpus)
+                                corpus_unbalanced = X_train_unbalanced["X"]
+
+                                vectorizer.fit(corpus_unbalanced)
+                                X_train_new_unbalanced = vectorizer.transform(corpus_unbalanced)
                                 dic_vocabulary = vectorizer.vocabulary_
 
                                 if plot == 2:
-                                    sns.heatmap(X_train_new.todense()[:, np.random.randint(0, X_train_new.shape[1], 100)] == 0, vmin=0, vmax=1, cbar=False).set_title('Sparse Matrix Sample')
+                                    sns.heatmap(X_train_new_unbalanced.todense()[:, np.random.randint(0, X_train_new_unbalanced.shape[1], 100)] == 0, vmin=0, vmax=1, cbar=False).set_title('Sparse Matrix Sample')
 
                                 # FEATURE SELECTION
                                 logger.info("FEATURE SELECTION")
-                                y = y_train
-                                X_names = vectorizer.get_feature_names()
+                                y = y_train_unbalanced
+                                X_names_unbalanced = vectorizer.get_feature_names()
 
 
 
@@ -933,23 +935,25 @@ else:
                                 dtf_features = pd.DataFrame()
                                 for cat in np.unique(y):
                                     logger.info("cat: " + str(cat))
-                                    chi2, p = feature_selection.chi2(X_train_new, y == cat)
-                                    dtf_features = dtf_features.append(pd.DataFrame({"feature": X_names, "score": 1 - p, "y": cat}))
+                                    chi2, p = feature_selection.chi2(X_train_new_unbalanced, y == cat)
+                                    dtf_features = dtf_features.append(pd.DataFrame({"feature": X_names_unbalanced, "score": 1 - p, "y": cat}))
                                     dtf_features = dtf_features.sort_values([label_field, "score"], ascending=[True, False])
                                     dtf_features = dtf_features[dtf_features["score"] > p_value_limit]
 
-                                X_names_new = dtf_features["feature"].unique().tolist()
+                                X_names_new_unbalanced = dtf_features["feature"].unique().tolist()
 
                                 # shorter
                                 logger.info("SHORTENING VOCABULARY")
 
-                                if len(X_names_new) > 0:
-                                    vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names_new)
+                                if len(X_names_new_unbalanced) > 0:
+                                    vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names_new_unbalanced)
                                 else:
-                                    vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names)
+                                    vectorizer_new = feature_extraction.text.TfidfVectorizer(vocabulary=X_names_unbalanced)
                                     p_value_limit = "no limit"
 
 
+
+                                corpus = X_train["X"]
                                 vectorizer_new.fit(corpus)
                                 X_train_new2 = vectorizer_new.transform(corpus)
                                 dic_vocabulary = vectorizer_new.vocabulary_
@@ -1028,7 +1032,7 @@ else:
                                                              "p_value_limit": [p_value_limit],
                                                              "ngram_range": [ngram_range],
                                                              "tfidf_classifier": [tfidf_classifier],
-                                                             "number_relevant_features": [len(X_names_new)]})
+                                                             "number_relevant_features": [len(X_names_new_unbalanced)]})
 
                                 ## test
                                 y_test = dtf_test[label_field].values
