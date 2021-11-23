@@ -85,7 +85,7 @@ import gensim
 import gensim.downloader as gensim_api
 
 
-## for deep learning
+## for deep learningwith a
 from tensorflow.keras import models, layers, preprocessing as kprocessing
 
 

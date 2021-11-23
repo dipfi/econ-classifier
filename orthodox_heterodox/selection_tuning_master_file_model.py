@@ -101,26 +101,26 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
+input_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_1000"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 plot = 0 #0 = none, 1 = some, 2 = all
 
-save_results = True
+save_results = False
 results_file_name = False
 
-use_model = True
+use_model = False
 save_model = False
 model_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_10000_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
 
-save_weights = True
+save_weights = False
 
 use_training_samples=False
 save_training_samples=False
 
-train_on_all = True
+train_on_all = False
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
@@ -139,10 +139,10 @@ tfidf = False
 max_features_list = [30000] #[1000, 5000, 10000]
 p_value_limit_list = [0.7] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
-tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "LogisticRegressionCV", "SVC", "RandomForestClassifier","GradientBoostingClassifier"]
+tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "RandomForestClassifier","GradientBoostingClassifier", "SVC"]
 
 #w2v only
-w2v = True
+w2v = False
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
 which_embeddings = "word2vec_numabs_909_embedlen_300_embedepo_10_window_8_embed_False" #specify model to use here
@@ -163,7 +163,7 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = False
+bert = True
 small_model_list = [True]
 bert_batch_size_list = [64] #suggestion 64
 bert_epochs_list = [1]
@@ -496,7 +496,7 @@ if use_model:
 
         X_test_ids = dtf["index"].tolist()
         max_length_of_document_vector_bert = max_length_of_document_vector_bert_list[0]
-        maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
+        maxqnans = np.int((max_length_of_document_vector_bert - 20))# / 2)
 
         text_lst = [text[:-50] for text in dtf[text_field]]
         text_lst = [' '.join(text.split()[:maxqnans]) for text in text_lst]
@@ -579,16 +579,71 @@ if use_model:
         WOS_ID = dtf["UT (Unique WOS ID)"].tolist()
     except:
         WOS_ID = [None for i in range(len(dtf))]
+    try:
+        author = dtf["Author Full Names"].tolist()
+    except:
+        author = [None for i in range(len(dtf))]
+    try:
+        title = dtf["Article Title"].tolist()
+    except:
+        title = [None for i in range(len(dtf))]
+    try:
+        abstract = dtf["Abstract"].tolist()
+    except:
+        abstract = [None for i in range(len(dtf))]
+    try:
+        times_cited = dtf["Times Cited, All Databases"].tolist()
+    except:
+        times_cited = [None for i in range(len(dtf))]
+    try:
+        abstract = dtf[text_field].tolist()
+    except:
+        try:
+            abstract = dtf["Abstract"].tolist()
+        except:
+            abstract = [None for i in range(len(dtf))]
+    try:
+        WOS_category = dtf["WoS Categories"].tolist()
+    except:
+        WOS_category = [None for i in range(len(dtf))]
+    try:
+        research_area = dtf["Research Areas"].tolist()
+    except:
+        research_area = [None for i in range(len(dtf))]
+    try:
+        label = dtf[label_field].tolist()
+    except:
+        try:
+            label = dtf["labels"].tolist()
+        except:
+            label = [None for i in range(len(dtf))]
+    try:
+        keywords_author = dtf["Author Keywords"].tolist()
+    except:
+        keywords_author = [None for i in range(len(dtf))]
+    try:
+        keywords_plus = dtf["Keywords Plus"].tolist()
+    except:
+        keywords_plus = [None for i in range(len(dtf))]
 
     results_df = pd.DataFrame({"time": [now for i in predicted],
                                "input_data": [input_file_name for i in predicted],
                                "model_file_name": [model_file_name for i in predicted],
                                "journal": journal,
                                "pubyear": pubyear,
-                               "WOS_ID": WOS_ID,
+                               "author": author,
+                               "times_cited": times_cited,
                                "predicted": predicted,
                                "predicted_bin": predicted_bin,
-                               "predicted_prob": predicted_prob[:, 1]})
+                               "predicted_prob": predicted_prob[:, 1],
+                               "label": label,
+                               "title": title,
+                               "abstract": abstract,
+                               "research_area": research_area,
+                               "WOS_category": WOS_category,
+                               "WOS_ID": WOS_ID,
+                               "keywords_author": keywords_author,
+                               "keywords_plus": keywords_plus})
 
     results_path = data_path + "/results/" + results_file_name + ".csv"
 
@@ -1165,6 +1220,9 @@ else:
 
                                 nlp = gensim.models.word2vec.Word2Vec.load(pretrained_vectors)
 
+
+
+                                '''
                                 word = "bad"
                                 logger.info(str(nlp.wv[word].shape))
                                 logger.info(word + ": " + str(nlp.wv.most_similar(word)))
@@ -1176,6 +1234,7 @@ else:
                                 load_embeddings_end = time.perf_counter()
                                 load_embeddings_time = load_embeddings_end - load_embeddings_start
                                 logger.info(f"loading embeddings in {load_embeddings_time} seconds")
+                                '''
 
                             if train_new:
                                 train_embeddings_start = time.perf_counter()
@@ -1561,7 +1620,7 @@ else:
                         ## add special tokens
                         logger.info("add special tokens")
 
-                        maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
+                        maxqnans = np.int((max_length_of_document_vector_bert - 20)) # / 2)
                         corpus_tokenized = ["[CLS] " +
                                             " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
                                             " [SEP] " for txt in corpus]
@@ -1715,7 +1774,7 @@ else:
 
                             ## add special tokens
                             logger.info("add special tokens test")
-                            maxqnans = np.int((max_length_of_document_vector_bert - 20) / 2)
+                            maxqnans = np.int((max_length_of_document_vector_bert - 20))# / 2)
                             corpus_tokenized = ["[CLS] " +
                                                 " ".join(tokenizer.tokenize(re.sub(r'[^\w\s]+|\n', '',str(txt).lower().strip()))[:maxqnans]) +
                                                 " [SEP] " for txt in corpus]
