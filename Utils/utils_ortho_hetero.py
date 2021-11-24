@@ -206,6 +206,7 @@ def evaluate(classes,
     MSE_NEGATIVE = mse_negative
     MSE_POSITIVE = mse_positive
     MSE_AVERAGE = mse_average
+    AVG_PRED_PROB = np.mean(predicted_prob[:, 1])
 
     # results
 
@@ -229,7 +230,8 @@ def evaluate(classes,
                                "MCC": [MCC],
                                "MSE_NEGATIVE": [MSE_NEGATIVE],
                                "MSE_POSITIVE": [MSE_POSITIVE],
-                               "MSE_AVERAGE": [MSE_AVERAGE]})
+                               "MSE_AVERAGE": [MSE_AVERAGE],
+                               "AVG_PRED_PROB": [AVG_PRED_PROB]})
 
     return result_fct
 
@@ -361,7 +363,7 @@ def utils_preprocess_text(text,
 
     lst_stopwords = nltk.corpus.stopwords.words("english")
 
-    subtitles = ["design", "methodology", "approach", "originality", "value", "limitations", "implications", "elsevier"]
+    subtitles = ["design", "methodology", "approach", "originality", "value", "limitations", "implications", "elsevier", "purpose"]
     lst_stopwords.extend(subtitles)
 
     ## clean (convert to lowercase and remove punctuations and characters and then strip)
