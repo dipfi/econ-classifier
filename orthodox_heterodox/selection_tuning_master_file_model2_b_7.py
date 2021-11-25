@@ -131,7 +131,7 @@ test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
 journal_split = True
 num_journals = "all" #3 #"all"
 random_journals = False
-journal_list = [i for i in range(70,75)] #False # [65,1]
+journal_list = [i for i in range(75,76)] #False # [65,1]
 
 
 #TFIDF only
