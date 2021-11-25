@@ -109,11 +109,11 @@ cores = mp.cpu_count()  #mp.cpu_count()  #2
 plot = 0 #0 = none, 1 = some, 2 = all
 
 save_results = True
-results_file_name = "4Journals_W2V"
+results_file_name = "4Journals_BERT"
 
 use_model = False
 save_model = False
-model_file_name = "3All_Data_W2V" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
+model_file_name = "3All_Data_BERT" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
 
 save_weights = False
 
@@ -131,7 +131,7 @@ test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
 journal_split = True
 num_journals = "all" #3 #"all"
 random_journals = False
-journal_list = [i for i in range(20,30)] #False # [65,1]
+journal_list = [i for i in range(50,55)] #False # [65,1]
 
 
 #TFIDF only
@@ -142,7 +142,7 @@ ngram_range_list = [(1,1), (1,3)] #[(1,1), (1,2), (1,3)]
 tfidf_classifier_list = ["LogisticRegression"] #["naive_bayes", "LogisticRegression", "RandomForestClassifier","GradientBoostingClassifier", "SVC"]
 
 #w2v only
-w2v = True
+w2v = False
 use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embedding_vector_length]d" is used
 use_embeddings = False #if True a trained model needs to be selected below
 which_embeddings = False #"word2vec_numabs_909_embedlen_300_embedepo_10_window_8_embed_False" #specify model to use here
@@ -163,11 +163,11 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = False
+bert = True
 small_model_list = [True]
 bert_batch_size_list = [64] #suggestion 64
-bert_epochs_list = [1, 3, 6, 12]
-max_length_of_document_vector_bert_list = [300] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
+bert_epochs_list = [12]
+max_length_of_document_vector_bert_list = [200] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
 classifier_loss_function_bert_list = ['sparse_categorical_crossentropy'] #, 'mean_squared_error', 'sparse_categorical_crossentropy', "kl_divergence", 'categorical_hinge'
 use_bert_feature_matrix = False
 save_bert_feature_matrix = False

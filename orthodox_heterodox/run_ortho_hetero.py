@@ -74,10 +74,10 @@ import langdetect
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_new"
+input_file_name = "WOS_top5_new"
 input_file_size = "all" #10000 #"all"
 input_file_type = "csv"
-output_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_2"
+output_file_name = "WOS_top5_new_preprocessed_2"
 sample_size = "all" #"all"  #input_file_size #10000 #"all"
 text_field = "Abstract"  # "title" #"abstract"
 label_field = "labels"
