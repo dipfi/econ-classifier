@@ -101,19 +101,19 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_2"
+input_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_1000"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
 cores = mp.cpu_count()  #mp.cpu_count()  #2
 plot = 0 #0 = none, 1 = some, 2 = all
 
-save_results = True
-results_file_name = "1Model_Selection_TFIDF"
+save_results = False
+results_file_name = "1Model_Selection_BERT"
 
 use_model = False
 save_model = False
-model_file_name = "4Journals_Bert" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
+model_file_name = "1Model_Selection_BERT" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
 
 save_weights = False
 
@@ -124,7 +124,7 @@ train_on_all = False
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
-use_reproducible_train_test_split = True
+use_reproducible_train_test_split = False
 train_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_train_9"
 test_set_name = "WOS_lee_heterodox_und_samequality_preprocessed_test_1"
 
@@ -135,7 +135,7 @@ journal_list = ["econometric reviews"] #[i for i in range(70,78)] #False # [65,1
 
 
 #TFIDF only
-tfidf = True
+tfidf = False
 min_df_list = [3, 5, 10] #[1000, 5000, 10000]
 p_value_limit_list = [0.0, 0.5, 0.75, 0.9] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1), (1,3)] #[(1,1), (1,2), (1,3)]
@@ -163,8 +163,8 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = False
-small_model_list = [True]
+bert = True
+small_model_list = [False]
 bert_batch_size_list = [64] #suggestion 64
 bert_epochs_list = [1, 3, 6, 12]
 max_length_of_document_vector_bert_list = [170, 205, 250] #np.max([len(i.split()) for i in X_train_series]) #np.quantile([len(i.split()) for i in X_train_series], 0.7) ; suggesion: 350
@@ -487,9 +487,15 @@ if use_model:
         small_model = small_model_list[0]
 
         if small_model:
-            tokenizer = transformers.AutoTokenizer.from_pretrained('distilbert-base-uncased', do_lower_case=True)
+            try:
+                tokenizer = transformers.AutoTokenizer.from_pretrained(data_path + '/distilbert-base-uncased/', do_lower_case=True)
+            except:
+                tokenizer = transformers.AutoTokenizer.from_pretrained('distilbert-base-uncased', do_lower_case=True)
         else:
-            tokenizer = transformers.AutoTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+            try:
+                tokenizer = transformers.AutoTokenizer.from_pretrained(data_path + '/bert-base-uncased/', do_lower_case=True)
+            except:
+                tokenizer = transformers.AutoTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
         # Feature engineer Test set
         logger.info("Feature engineer Test set")
@@ -1616,9 +1622,15 @@ else:
                     small_model_loop += 1
 
                     if small_model:
-                        tokenizer = transformers.AutoTokenizer.from_pretrained('distilbert-base-uncased', do_lower_case=True)
+                        try:
+                            tokenizer = transformers.AutoTokenizer.from_pretrained(data_path + '/distilbert-base-uncased/', do_lower_case=True)
+                        except:
+                            tokenizer = transformers.AutoTokenizer.from_pretrained('distilbert-base-uncased', do_lower_case=True)
                     else:
-                        tokenizer = transformers.AutoTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+                        try:
+                            tokenizer = transformers.AutoTokenizer.from_pretrained(data_path + '/bert-base-uncased/', do_lower_case=True)
+                        except:
+                            tokenizer = transformers.AutoTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
                     max_length_of_document_vector_bert_loop = 0
 
@@ -1730,7 +1742,11 @@ else:
                                 config = transformers.DistilBertConfig(dropout=0.2, attention_dropout=0.2)
                                 config.output_hidden_states = False
 
-                                nlp = transformers.TFDistilBertModel.from_pretrained('distilbert-base-uncased', config=config)
+                                try:
+                                    nlp = transformers.TFDistilBertModel.from_pretrained(data_path + '/distilbert-base-uncased/', config=config)
+                                except:
+                                    nlp = transformers.TFDistilBertModel.from_pretrained('distilbert-base-uncased', config=config)
+
                                 bert_out = nlp.distilbert(idx, attention_mask=masks)[0]
 
                                 ## fine-tuning
@@ -1759,7 +1775,11 @@ else:
                                 segments = layers.Input((max_length_of_document_vector_bert), dtype="int32", name="input_segments")
 
                                 ## pre-trained bert
-                                nlp = transformers.TFBertModel.from_pretrained("bert-base-uncased")
+                                try:
+                                    nlp = transformers.TFBertModel.from_pretrained(data_path + '/bert-base-uncased/')
+                                except:
+                                    nlp = transformers.TFBertModel.from_pretrained('bert-base-uncased')
+
                                 bert_out = nlp.bert([idx, masks, segments])
                                 '''
                                 sequence_out = bert_out.last_hidden_state
