@@ -109,11 +109,11 @@ cores = mp.cpu_count()  #mp.cpu_count()  #2
 plot = 0 #0 = none, 1 = some, 2 = all
 
 save_results = True
-results_file_name = "4Journals_BERT"
+results_file_name = "4Journals_BERT_test"
 
 use_model = False
 save_model = False
-model_file_name = "3All_Data_BERT" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
+model_file_name = "3All_Data_BERT_test" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
 
 save_weights = False
 
