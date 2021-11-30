@@ -31,7 +31,7 @@ models = ["TFIDF", "W2V", "BERT"]
 plots_tabels_folder = "plots_and_tables"
 
 save_plots = False
-save_tables = False
+save_tables = True
 
 def load_data(information,
               model,
@@ -89,9 +89,12 @@ plot_duration.set(xscale = "log")
 
 dtf_model_selection_tfidf_latex = dtf_model_selection_tfidf[["tfidf_classifier", "min_df", "p_value_limit", "ngram_range", "AUC_PR", "number_relevant_features"]].sort_values(by=["tfidf_classifier", "min_df", "p_value_limit", "ngram_range"])
 
+
 if save_tables:
     with open(data_path + "/" + plots_tabels_folder + "/model_selection_tfidf_table.tex",'w') as tf:
-        tf.write(dtf_model_selection_tfidf_latex.to_latex(index = False))
+        tf.write(dtf_model_selection_tfidf_latex.to_latex(caption = "Model selection for classification systems based on term-frequencies",
+                                                          label = "model_selection_tfidf",
+                                                          index = False))
 
 # W2V
 #################
@@ -117,7 +120,9 @@ dtf_model_selection_w2v_latex = dtf_model_selection_w2v[["num_epochs_for_embeddi
 
 if save_tables:
     with open(data_path + "/" + plots_tabels_folder + "/model_selection_w2v_table.tex",'w') as tf:
-        tf.write(dtf_model_selection_w2v_latex.to_latex(index = False))
+        tf.write(dtf_model_selection_w2v_latex.to_latex(caption = "Model selection for classification systems based on word embeddings",
+                                                        label = "model_selection_w2v",
+                                                        index = False))
 
 
 # BERT
@@ -142,7 +147,9 @@ dtf_model_selection_bert_latex = dtf_model_selection_bert[["small_model", "bert_
 
 if save_tables:
     with open(data_path + "/" + plots_tabels_folder + "/model_selection_bert_table.tex",'w') as tf:
-        tf.write(dtf_model_selection_bert_latex.to_latex(index = False))
+        tf.write(dtf_model_selection_bert_latex.to_latex(caption = "Model selection for classification systems based on Transformers",
+                                                        label = "model_selection_bert",
+                                                        index = False))
 
 
 
@@ -174,21 +181,23 @@ dtf_journals_pivot.reset_index(level = ["Label","test_journal"], inplace = True)
 dtf_journals_pivot_recall = dtf_journals_pivot[["Label", "test_journal", "Recall"]]
 dtf_journals_pivot_recall.columns = dtf_journals_pivot_recall.columns.to_flat_index()
 dtf_journals_pivot_recall.columns = ["Label","Journal","Recall Bert","Recall TFIDF","Recall W2V"]
-dtf_journals_pivot_recall["Journal"] = dtf_journals_pivot_recall["Journal"].str.slice(0,25).copy()
 
 if save_tables:
     with open(data_path + "/" + plots_tabels_folder + "/journals_table_recall.tex",'w') as tf:
-        tf.write(dtf_journals_pivot_recall.to_latex(index = False))
+        tf.write(dtf_journals_pivot_recall.to_latex(caption = "Recall by journal and model",
+                                                    label = "journals_table_recall",
+                                                    index = False))
 
 
 dtf_journals_pivot_AVG_PRED_PROB = dtf_journals_pivot[["Label", "test_journal", "AVG_PRED_PROB"]]
 dtf_journals_pivot_AVG_PRED_PROB.columns = dtf_journals_pivot_AVG_PRED_PROB.columns.to_flat_index()
-dtf_journals_pivot_AVG_PRED_PROB.columns = ["Label","Journal","AVG_PRED_PROB Bert","AVG_PRED_PROB TFIDF","AVG_PRED_PROB W2V"]
-dtf_journals_pivot_AVG_PRED_PROB["Journal"] = dtf_journals_pivot_AVG_PRED_PROB["Journal"].str.slice(0,25).copy()
+dtf_journals_pivot_AVG_PRED_PROB.columns = ["Label","Journal","Het. score Bert","Het. score TFIDF","Het. score W2V"]
 
 if save_tables:
     with open(data_path + "/" + plots_tabels_folder + "/journals_table_AVG_PRED_PROB.tex",'w') as tf:
-        tf.write(dtf_journals_pivot_AVG_PRED_PROB.to_latex(index = False))
+        tf.write(dtf_journals_pivot_AVG_PRED_PROB.to_latex(caption = "Heterodoxy score by journal and model",
+                                                            label = "journals_table_AVG_PRED_PROB",
+                                                            index = False))
 
 
 
@@ -218,6 +227,39 @@ if save_plots:
     plt.savefig(data_path + "/" + plots_tabels_folder + "/journals_plot_AVG_PRED_PROB")
 
 
+# Means
+########
+
+dtf_journals_pivot_recall = dtf_journals[["test_journal", "current_model", "Label", "Recall"]].pivot(index=["test_journal", "current_model"],
+                                                                                           columns = "Label",
+                                                                                           values = "Recall")
+dtf_journals_pivot_recall = dtf_journals_pivot_recall.reset_index(["test_journal", "current_model"])
+dtf_journals_means_recall = dtf_journals_pivot_recall.groupby("current_model").mean("Recall")
+
+dtf_journals_pivot_AVG_PRED_PROB = dtf_journals[["test_journal", "current_model", "Label", "AVG_PRED_PROB"]].pivot(index=["test_journal", "current_model"],
+                                                                                           columns = "Label",
+                                                                                           values = "AVG_PRED_PROB")
+dtf_journals_pivot_AVG_PRED_PROB = dtf_journals_pivot_AVG_PRED_PROB.reset_index(["test_journal", "current_model"])
+dtf_journals_means_AVG_PRED_PROB = dtf_journals_pivot_AVG_PRED_PROB.groupby("current_model").mean("AVG_PRED_PROB")
+
+if save_tables:
+    with open(data_path + "/" + plots_tabels_folder + "/journals_means_recall.tex", 'w') as tf:
+        tf.write(dtf_journals_means_recall.to_latex(caption="Average recall by model and label",
+                                                                   label="journals_means_recall"))
+
+if save_tables:
+    with open(data_path + "/" + plots_tabels_folder + "/journals_means_AVG_PRED_PROB.tex", 'w') as tf:
+        tf.write(dtf_journals_means_AVG_PRED_PROB.to_latex(caption="Average heterodoxy score by model and label",
+                                                                   label="journals_means_AVG_PRED_PROB"))
+
+
+
+
+#most heterodox/orthodox
+#######################
+
+dtf_journals_pivot_recall_ordered = dtf_journals_pivot_recall.sort_values("Recall TFIDF")
+
 
 # Correlation Tables
 ###########
@@ -232,16 +274,24 @@ dtf_journals_heterodox_AVG_PRED_PROB_correlation = dtf_journals[dtf_journals["La
 
 if save_tables:
     with open(data_path + "/" + plots_tabels_folder + "/journals_orthodox_table_recall_corr.tex",'w') as tf:
-        tf.write(dtf_journals_orthodox_recall_correlation.to_latex(index = False))
+        tf.write(dtf_journals_orthodox_recall_correlation.to_latex(caption = "Correlation between models for recall of orthodox journals",
+                                                                    label = "journals_orthodox_table_recall_corr",
+                                                                    index = False))
 
     with open(data_path + "/" + plots_tabels_folder + "/journals_heterdox_table_recall_corr.tex",'w') as tf:
-        tf.write(dtf_journals_heterodox_recall_correlation.to_latex(index = False))
+        tf.write(dtf_journals_heterodox_recall_correlation.to_latex(caption = "Correlation between models for recall of heterodox journals",
+                                                                    label = "journals_heterdox_table_recall_corr",
+                                                                    index = False))
 
     with open(data_path + "/" + plots_tabels_folder + "/journals_orthodox_table_avg_pred_prob_corr.tex", 'w') as tf:
-        tf.write(dtf_journals_orthodox_AVG_PRED_PROB_correlation.to_latex(index=False))
+        tf.write(dtf_journals_orthodox_AVG_PRED_PROB_correlation.to_latex(caption = "Correlation between models for heterodoxy score of orthodox journals",
+                                                                        label = "journals_orthodox_table_avg_pred_prob_corr",
+                                                                        index = False))
 
     with open(data_path + "/" + plots_tabels_folder + "/journals_heterodox_table_avg_pred_prob_corr.tex", 'w') as tf:
-        tf.write(dtf_journals_heterodox_AVG_PRED_PROB_correlation.to_latex(index=False))
+        tf.write(dtf_journals_heterodox_AVG_PRED_PROB_correlation.to_latex(caption = "Correlation between models for heterodoxy score of heterodox journals",
+                                                                        label = "journals_heterodox_table_avg_pred_prob_corr",
+                                                                        index = False))
 
 
 
@@ -285,10 +335,14 @@ dtf_top5_rank_correlation = dtf_top5_pivot["rank"].astype(float).corr()
 
 if save_tables:
     with open(data_path + "/" + plots_tabels_folder + "/top5_table_predicted_prob_corr.tex",'w') as tf:
-        tf.write(dtf_top5_predicted_prob_correlation.to_latex(index = False))
+        tf.write(dtf_top5_predicted_prob_correlation.to_latex(caption = "Correlation between models for heterodoxy score of articles from Top 5 journals",
+                                                            label = "top5_table_predicted_prob_corr",
+                                                            index = False))
 
     with open(data_path + "/" + plots_tabels_folder + "/top5_table_rank_corr.tex",'w') as tf:
-        tf.write(dtf_top5_rank_correlation.to_latex(index = False))
+        tf.write(dtf_top5_rank_correlation.to_latex(caption = "Correlation between models for the heterodoxy ranks of articles from Top 5 journals",
+                                                    label = "top5_table_rank_corr",
+                                                    index = False))
 
 
 
@@ -303,16 +357,20 @@ pd.crosstab(dtf_top5_pivot[("predicted","W2V")],dtf_top5_pivot[("predicted","BER
 
 
 
-dtf_top5_tfidf_heterodox40 = dtf_top5_pivot.sort_values(by = ("rank","TFIDF"))[0:40]
+dtf_top5_tfidf_heterodox20 = dtf_top5_pivot.sort_values(by = ("rank","TFIDF"))[0:20]
 
-dtf_top5_tfidf_orthodox40 = dtf_top5_pivot.sort_values(by = ("rank","TFIDF"), ascending=False)[0:40]
+dtf_top5_tfidf_orthodox20 = dtf_top5_pivot.sort_values(by = ("rank","TFIDF"), ascending=False)[0:20]
 
 if save_tables:
-    with open(data_path + "/" + plots_tabels_folder + "/top5_table_top_40_most_heterodox.tex",'w') as tf:
-        tf.write(dtf_top5_tfidf_heterodox40.to_latex(index = False))
+    with open(data_path + "/" + plots_tabels_folder + "/top5_table_top_20_most_heterodox.tex",'w') as tf:
+        tf.write(dtf_top5_tfidf_heterodox20.to_latex(caption = "Top 20 most heterodox articles from Top 5 journals",
+                                                    label = "top5_table_top_20_most_heterodox",
+                                                    index = False))
 
-    with open(data_path + "/" + plots_tabels_folder + "/top5_table_top_40_most_orthodox.tex",'w') as tf:
-        tf.write(dtf_top5_tfidf_orthodox40.to_latex(index = False))
+    with open(data_path + "/" + plots_tabels_folder + "/top5_table_top_20_most_orthodox.tex",'w') as tf:
+        tf.write(dtf_top5_tfidf_orthodox20.to_latex(caption = "Top 20 lest heterodox articles from Top 5 journals",
+                                                    label = "top5_table_top_20_most_orthodox",
+                                                    index = False))
 
 bins = np.arange(1990, 2025, 5).tolist()
 dtf_top5['pubyear_bin'] = pd.cut(dtf_top5['pubyear'], bins).astype("string")
@@ -454,20 +512,24 @@ if save_plots:
 ################
 
 dtf_top5_authors_atleast5_onehet["prop_of_heterodox_publications"] = dtf_top5_authors_atleast5_onehet["heterodox_publications"]/dtf_top5_authors_atleast5_onehet["total_publications"]
-dtf_top5_authors_mosthet_count = dtf_top5_authors_atleast5_onehet[["total_publications", "heterodox_publications", "prop_of_heterodox_publications"]].sort_values(["heterodox_publications", "prop_of_heterodox_publications"], ascending = False)[0:40]
-dtf_top5_authors_mosthet_prop = dtf_top5_authors_atleast5_onehet[["total_publications", "heterodox_publications", "prop_of_heterodox_publications"]].sort_values(["prop_of_heterodox_publications", "heterodox_publications"], ascending = False)[0:40]
+dtf_top5_authors_mosthet_count = dtf_top5_authors_atleast5_onehet[["total_publications", "heterodox_publications", "prop_of_heterodox_publications"]].sort_values(["heterodox_publications", "prop_of_heterodox_publications"], ascending = False)[0:20]
+dtf_top5_authors_mosthet_prop = dtf_top5_authors_atleast5_onehet[["total_publications", "heterodox_publications", "prop_of_heterodox_publications"]].sort_values(["prop_of_heterodox_publications", "heterodox_publications"], ascending = False)[0:20]
 
 if save_tables:
     with open(data_path + "/" + plots_tabels_folder + "/top5_table_most_heterodox_count.tex",'w') as tf:
-        tf.write(dtf_top5_authors_mosthet_count.to_latex(index = False))
+        tf.write(dtf_top5_authors_mosthet_count.to_latex(caption = "Top 20 authors with the most heterodox articles published in the Top 5 Journals",
+                                                        label = "top5_table_most_heterodox_count",
+                                                        index = False))
 
     with open(data_path + "/" + plots_tabels_folder + "/top5_table_most_heterodox_proportion.tex",'w') as tf:
-        tf.write(dtf_top5_authors_mosthet_prop.to_latex(index = False))
+        tf.write(dtf_top5_authors_mosthet_prop.to_latex(caption = "Top 20 authors with the highest proportion of heterodox articles published in the Top 5 Journals",
+                                                        label = "top5_table_most_heterodox_proportion",
+                                                        index = False))
 
 
 
 
-
+end = "end"
 
 '''
 
@@ -494,3 +556,106 @@ publication_count["heterodox_proportion"] = publication_count["heterodox_count"]
 publication_count.sort_values("heterodox_count", ascending=False, inplace=True)
 
 '''
+
+
+##########
+# WEIGHTS
+##########
+
+dtf_weights_tfidf = load_data(information = "7Weights_All_Data", model = "TFIDF", results_folder = results_folder)
+
+dtf_weights_tfidf_pivot = dtf_weights_tfidf.pivot(index = ["words", "weights"],
+                                                    columns = ["prediction"],
+                                                    values = "counts")
+
+dtf_weights_tfidf_pivot.reset_index(["words", "weights"], inplace = True)
+dtf_weights_tfidf_pivot.fillna(0, inplace = True)
+dtf_weights_tfidf_pivot.columns = ["word","weight", "orthodox_count", "heterodox_count"]
+dtf_weights_tfidf_pivot = dtf_weights_tfidf_pivot[dtf_weights_tfidf_pivot["weight"] != 0].copy()
+dtf_weights_tfidf_pivot["total_count"] = dtf_weights_tfidf_pivot["orthodox_count"] + dtf_weights_tfidf_pivot["heterodox_count"]
+dtf_weights_tfidf_pivot["weighted_orthodox_count"] = (dtf_weights_tfidf_pivot["weight"] * dtf_weights_tfidf_pivot["orthodox_count"]) / dtf_weights_tfidf_pivot["total_count"]
+dtf_weights_tfidf_pivot["weighted_heterodox_count"] = (dtf_weights_tfidf_pivot["weight"] * dtf_weights_tfidf_pivot["heterodox_count"]) / dtf_weights_tfidf_pivot["total_count"]
+dtf_weights_tfidf_pivot["weighted_total_count"] = dtf_weights_tfidf_pivot["weight"] * dtf_weights_tfidf_pivot["total_count"]
+dtf_weights_tfidf_pivot.sort_values("weight", inplace=True)
+
+
+if save_plots:
+    fig, ax = plt.subplots(figsize= (10,6))
+    sns.histplot(data = dtf_weights_tfidf_pivot["weight"], kde=True)
+    ax.set_title("Distribution of the logistic regression weights in the TFIDF model", fontsize = 15)
+    plt.axvline(np.mean(dtf_weights_tfidf_pivot["weight"]), color = "r")
+    plt.show()
+    plt.savefig(data_path + "/" + plots_tabels_folder + "/weights_histogram_tfidf")
+
+dtf_weights_tfidf_top20_orthodox = dtf_weights_tfidf_pivot[["word", "weight", "total_count"]][0:20].copy()
+dtf_weights_tfidf_top20_heterodox = dtf_weights_tfidf_pivot[["word", "weight", "total_count"]][len(dtf_weights_tfidf_pivot)-20:len(dtf_weights_tfidf_pivot)].sort_values("weight", ascending=False).copy()
+
+if save_tables:
+    with open(data_path + "/" + plots_tabels_folder + "/weights_top20_orthodox_words.tex",'w') as tf:
+        tf.write(dtf_weights_tfidf_top20_orthodox.to_latex(caption = "20 words with the largest Logistic Regression weights in the TFIDF model",
+                                                            label = "weights_top20_orthodox_words",
+                                                            index = False))
+
+    with open(data_path + "/" + plots_tabels_folder + "/weights_top20_heterodox_words.tex",'w') as tf:
+        tf.write(dtf_weights_tfidf_top20_orthodox.to_latex(caption = "20 words with the smallest Logistic Regression weights in the TFIDF model",
+                                                            label = "weights_top20_heterodox_words",
+                                                            index = False))
+
+dtf_weights_tfidf_pivot['percentile'] = pd.qcut(dtf_weights_tfidf_pivot['weight'], 100, labels=False)
+
+selected_words = ["imperialism",
+                  "power",
+                  "utility",
+                  "marginal",
+                  "inelastic",
+                  "monopolist",
+                  "supply",
+                  "equilibrium",
+                  "rational",
+                  "maximize",
+                  "opportunity",
+                  "cost",
+                  "tradeoff",
+                  "substitute",
+                  "rent",
+                  "optimum",
+                  "optimal",
+                  "preference",
+                  "elasticity",
+                  "market",
+                  "loanable",
+                  "demand",
+                  "institution",
+                  "innovation",
+                  "destruction",
+                  "structural",
+                  "demand",
+                  "unemployment",
+                  "gender",
+                  "woman",
+                  "class",
+                  "power",
+                  "exploitation",
+                  "evolution",
+                  "dynamic",
+                  "system",
+                  "agent",
+                  "behaviour",
+                  "psychology",
+                  "mental",
+                  "unemployment",
+                  "inflation",
+                  "mental",
+                  "optimization",
+                  "scarcity",
+                  "growth",
+                  "profit"]
+
+dtf_weights_tfidf_pivot_selection = dtf_weights_tfidf_pivot[dtf_weights_tfidf_pivot.word.isin(selected_words)][["word", "weight", "percentile"]].copy()
+
+
+if save_tables:
+    with open(data_path + "/" + plots_tabels_folder + "/weights_tfidf_selected_words.tex",'w') as tf:
+        tf.write(dtf_weights_tfidf_pivot_selection.to_latex(caption = "weigths and percentile rank of selected words",
+                                                            label = "weights_tfidf_selected_words",
+                                                            index = False))
