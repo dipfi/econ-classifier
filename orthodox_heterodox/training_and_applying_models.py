@@ -101,7 +101,7 @@ import transformers
 ############################################
 logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
 print_charts_tables = True  # False #True
-input_file_name = "WOS_top5_new_preprocessed_2"
+input_file_name = "WOS_lee_heterodox_und_samequality_new_preprocessed_1000"
 text_field_clean = "text_clean"  # "title" #"abstract"
 text_field = "text"
 label_field = "y"
@@ -113,14 +113,14 @@ results_file_name = "4Journals_BERT_test"
 
 use_model = True
 save_model = False
-model_file_name = "3All_Data_TFIDF" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
+model_file_name = "3All_Data_BERT" #"WOS_lee_heterodox_und_samequality_new_preprocessed_tfidf_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_w2v_model" #"WOS_lee_heterodox_und_samequality_new_preprocessed_bert_model"
 
-save_weights = True
+save_weights = False
 
 use_training_samples=False
 save_training_samples=False
 
-train_on_all = True
+train_on_all = False
 test_size = 0.1 #suggestion: 0.1
 training_set = "oversample" # "oversample", "undersample", "heterodox", "samequality" ; suggestion: oversample
 
@@ -135,7 +135,7 @@ journal_list = [i for i in range(0,5)] #False # [65,1]
 
 
 #TFIDF only
-tfidf = True
+tfidf = False
 min_df_list = [5] #[1000, 5000, 10000]
 p_value_limit_list = [0.0] #[0.8, 0.9, 0.95]
 ngram_range_list = [(1,1)] #[(1,1), (1,2), (1,3)]
@@ -147,7 +147,7 @@ use_gigaword = False #if True the pretrained model "glove-wiki-gigaword-[embeddi
 use_embeddings = False #if True a trained model needs to be selected below
 which_embeddings = False #"word2vec_numabs_909_embedlen_300_embedepo_10_window_8_embed_False" #specify model to use here
 embedding_folder = "embeddings"
-train_new = True #if True new embeddings are trained
+train_new = False #if True new embeddings are trained
 
 num_epochs_for_embedding_list = [5] #number of epochs to train the word embeddings ; sugegstion: 10 (embedding_set = "False")
 num_epochs_for_classification_list= [15] #number of epochs to train the the classifier ; suggetion: 10 (with 300 dim. embeddings)
@@ -163,7 +163,7 @@ classifier_loss_function_w2v_list = ['sparse_categorical_crossentropy'] #, 'mean
 w2v_batch_size_list = [256] #suggestion: 256
 
 #BERT only
-bert = False
+bert = True
 small_model_list = [True]
 bert_batch_size_list = [64] #suggestion 64
 bert_epochs_list = [12]
