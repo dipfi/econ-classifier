@@ -1,3 +1,21 @@
+'''
+This script is part of the Master Thesis of Damian Durrer (SfS ETH Zürich), submission date 16 December 2021.
+
+This script is part of the following project:
+- Github: https://github.com/dipfi/econ-classifier
+- Euler: /cluster/work/lawecon/Projects/Ash_Durrer/dev/scripts
+
+The data for reproduction can be found on:
+- K-drive: https://drive.infomaniak.com/app/share/249519/d8dab04d-7ced-4f3a-a995-1916b3aa03a9
+- Euler: /cluster/work/lawecon/Projects/Ash_Durrer/dev/data
+--> The relevant config-files for github and the profile settings for Euler are in the "notes" folders
+
+
+Much of the code here is based on:
+https://towardsdatascience.com/text-classification-with-nlp-tf-idf-vs-word2vec-vs-bert-41ff868d1794
+'''
+
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +45,7 @@ data_path, scripts_path, project_path = config()
 sns.set_style('whitegrid')
 sns.set_context("paper")
 
-results_folder = "results_final"
+results_folder = "results"
 models = ["TFIDF", "W2V", "BERT"]
 plots_tables_folder = "plots_and_tables"
 
@@ -321,6 +339,8 @@ if save_tables:
 ###########
 
 dtf_journals_recall_correlation = dtf_journals.pivot(index="test_journal", columns="current_model", values="Recall").corr()
+
+dtf_journals_recall_correlation
 dtf_journals_orthodox_recall_correlation = dtf_journals[dtf_journals["Label"] == "0orthodox"].pivot(index="test_journal", columns="current_model", values="Recall").corr().round(2)
 dtf_journals_heterodox_recall_correlation = dtf_journals[dtf_journals["Label"] == "1heterodox"].pivot(index="test_journal", columns="current_model", values="Recall").corr().round(2)
 
@@ -401,6 +421,8 @@ dtf_top5_predicted_prob_correlation = dtf_top5_pivot["predicted_prob"].astype(fl
 dtf_top5_predicted_prob_correlation["model"].replace({"W2W":"WORD2VEC", "BERT":"DISTILBERT"}, inplace = True)
 dtf_top5_predicted_prob_correlation.columns = ["Model", "DISTILBERT", "TFIDF", "WORD2VEC"]
 
+
+
 dtf_top5_rank_correlation = dtf_top5_pivot["rank"].astype(float).corr().round(2).reset_index()
 dtf_top5_rank_correlation["model"].replace({"W2W":"WORD2VEC", "BERT":"DISTILBERT"}, inplace = True)
 dtf_top5_rank_correlation.columns = ["Model", "DISTILBERT", "TFIDF", "WORD2VEC"]
@@ -417,6 +439,8 @@ if save_tables:
                                                        column_format="lccc"))
 
 dtf_top5_pivot.columns = dtf_top5_pivot.columns.to_flat_index()
+
+dtf_top5_pivot[("predicted", "TFIDF")] = dtf_top5_pivot[("predicted", "TFIDF")].str.replace("0samequality","0orthodox")
 
 dtf_top5_table_cm_TFIDF_W2V = pd.crosstab(dtf_top5_pivot[("predicted", "TFIDF")], dtf_top5_pivot[("predicted", "W2V")]).reset_index()
 dtf_top5_table_cm_TFIDF_W2V.columns = ["TFIDF/WORD2VEC", "0orthodox", "1heterodox"]
@@ -1104,14 +1128,14 @@ if save_tables:
 
 
 
-
+'''
 if save_tables:
     with open(data_path + "/" + plots_tables_folder + "/weights_tfidf_selected_words.tex", 'w') as tf:
         tf.write(dtf_weights_tfidf_pivot_selection.to_latex(caption="weigths and percentile rank of selected words",
                                                             label="weights_tfidf_selected_words",
                                                             index=False))
 
-
+'''
 
 
 
