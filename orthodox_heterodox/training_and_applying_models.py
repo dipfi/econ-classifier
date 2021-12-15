@@ -185,9 +185,9 @@ if load_parameter_settings:
     # REPRODUCE MODEL SELECTION
     ###
 
-    #from Utils.REPRODUCE_1Model_Selection_TFIDF import *
-    #from Utils.REPRODUCE_1Model_Selection_W2V import *
-    #from Utils.REPRODUCE_1Model_Selection_BERT import *
+    # from Utils.REPRODUCE_1Model_Selection_TFIDF import *
+    # from Utils.REPRODUCE_1Model_Selection_W2V import *
+    # from Utils.REPRODUCE_1Model_Selection_BERT import *
 
 
 
@@ -218,12 +218,6 @@ if load_parameter_settings:
     # from Utils.REPRODUCE_5Top5_W2V import *
     # from Utils.REPRODUCE_5Top5_BERT import *
     print()
-
-
-
-
-
-
 
 
 '''
@@ -536,7 +530,6 @@ if not load_parameter_settings:
                 #### Alternative [i for i in range(0, 5)] // choose a list of journals to use as hold out set (one by one)
                 #### Alternative [1,5,8,66] // choose a list of journals to use as hold out set (one by one)
 #######################################
-
 
 #set the model dummy parameters
 #######################################
