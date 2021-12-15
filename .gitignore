@@ -5,6 +5,7 @@ config.ini
 venv/
 lsf.*
 archive/
+*/archive/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
