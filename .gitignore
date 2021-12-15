@@ -5,7 +5,8 @@ config.ini
 venv/
 lsf.*
 archive/
-*/archive/
+orthodox_heterodox/archive/
+Utils/orthodox_heterodox/archive/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
