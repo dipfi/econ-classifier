@@ -5,10 +5,9 @@ This script is part of the following project:
 - Github: https://github.com/dipfi/econ-classifier
 - Euler: /cluster/work/lawecon/Projects/Ash_Durrer/dev/scripts
 
-The data for reproduction can be found on:
-- K-drive: https://drive.infomaniak.com/app/share/249519/d8dab04d-7ced-4f3a-a995-1916b3aa03a9
-- Euler: /cluster/work/lawecon/Projects/Ash_Durrer/dev/data
---> The relevant config-files for github and the profile settings for Euler are in the "notes" folders
+The data for reproduction can be shared upon request:
+- Alternatively for members of the LawEcon group at ETHZ
+    -Euler: /cluster/work/lawecon/Projects/Ash_Durrer/dev/data
 
 
 Much of the code here is based on:
