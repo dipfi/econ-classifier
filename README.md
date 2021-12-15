@@ -9,6 +9,7 @@ The full text is available upon request.
 All the data, tables and plots to use the code on can be accessed on:
 https://drive.infomaniak.com/app/share/249519/d8dab04d-7ced-4f3a-a995-1916b3aa03a9
 --> Download data and retain the folder structure to use the code without adjustments.
+--> consult "readme" files in the data-folder for information on the data
 
 On the ETHZ Euler cluster, the data and code can be found under: /cluster/work/lawecon/Projects/Ash_Durrer/dev/"
 
