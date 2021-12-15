@@ -11,8 +11,14 @@ The data for reproduction can be found on:
 --> The relevant config-files for github and the profile settings for Euler are in the "notes" folders
 
 
-Much of the code here is based on:
-https://towardsdatascience.com/text-classification-with-nlp-tf-idf-vs-word2vec-vs-bert-41ff868d1794
+PREREQUISITS:
+- GET DATA FROM THE ABOVE SOURCES OR FROM THE WEB OF SCIENCE
+- IF YOU DONT USE THE PRE-PROCESSED DATA AND CALCULATED RESULTS FROM THE LINK ABOVE
+    - APPLY THE PROPROCESSING.PY SCRIPT FROM THE ABOVE GITHUP REPO TO YOUR DATA
+    - USE THE SCRIPT TRAINING_AND_APPLYING_MODELS.PY FROM THE ABOVE GITHUP REPO TO TRAIN MODELS AND GENERATE RESULTS
+
+THIS SCRIPT IS USED TO GENERATE THE PLOTS AND TABLES USED IN THE MASTERS THESIS "THE DIALECTS OF ECONOSPEAK" BY DAMIAN DURRER (2021)
+
 '''
 
 
@@ -174,19 +180,7 @@ if save_plots:
     plt.savefig(data_path + "/" + plots_tables_folder + "/model_selection_bert_auc_score")
     plt.close()
 
-'''
-plot_num_features = sns.lineplot(data = dtf_model_selection_bert[["bert_epochs","small_model", "duration"]], x = "bert_epochs", y = "duration", hue = "small_model")
-plot_num_features.set(xscale = "log")
-'''
-'''
-dtf_model_selection_bert_latex = dtf_model_selection_bert[["small_model", "bert_epochs", "AUC_PR"]].sort_values(by=["small_model", "bert_epochs"])
 
-if save_tables:
-    with open(data_path + "/" + plots_tables_folder + "/model_selection_bert_table.tex", 'w') as tf:
-        tf.write(dtf_model_selection_bert_latex.to_latex(caption="Model selection for classification systems based on Transformers",
-                                                         label="model_selection_bert",
-                                                         index=False))
-'''
 
 
 
@@ -291,44 +285,6 @@ if save_plots:
 
 # Means
 ########
-'''
-dtf_journals_pivot_recall = dtf_journals[["test_journal", "current_model", "Label", "Recall"]].pivot(index=["test_journal", "current_model"],
-                                                                                                     columns="Label",
-                                                                                                     values="Recall")
-dtf_journals_pivot_recall = dtf_journals_pivot_recall.reset_index(["test_journal", "current_model"])
-dtf_journals_means_recall = dtf_journals_pivot_recall.groupby("current_model").mean("Recall")
-
-dtf_journals_pivot_AVG_PRED_PROB = dtf_journals[["test_journal", "current_model", "Label", "AVG_PRED_PROB"]].pivot(index=["test_journal", "current_model"],
-                                                                                                                   columns="Label",
-                                                                                                                   values="AVG_PRED_PROB")
-dtf_journals_pivot_AVG_PRED_PROB = dtf_journals_pivot_AVG_PRED_PROB.reset_index(["test_journal", "current_model"])
-dtf_journals_means_AVG_PRED_PROB = dtf_journals_pivot_AVG_PRED_PROB.groupby("current_model").mean("AVG_PRED_PROB")
-
-
-dtf_journals_means_recall_latex = dtf_journals_means_recall.reset_index()
-dtf_journals_means_recall_latex["current_model"].replace({"bert":"DISTILBERT", "tfidf": "TFIDF", "w2v":"WORD2VEC"}, inplace = True)
-dtf_journals_means_recall_latex = dtf_journals_means_recall_latex[["current_model", "0orthodox","1heterodox"]].round(2)
-dtf_journals_means_recall_latex.columns = ["Current Model","Avg. recall (orthodox)","Avg. recall (heterodox)"]
-
-if save_tables:
-    with open(data_path + "/" + plots_tables_folder + "/journals_means_recall.tex", 'w') as tf:
-        tf.write(dtf_journals_means_recall_latex.to_latex(index=False,
-                                                   escape = False,
-                                                   column_format="lcc"))
-
-
-if save_tables:
-    with open(data_path + "/" + plots_tables_folder + "/journals_means_AVG_PRED_PROB.tex", 'w') as tf:
-        tf.write(dtf_journals_means_AVG_PRED_PROB.to_latex(caption="Average heterodoxy score by model and label",
-                                                           label="journals_means_AVG_PRED_PROB"))
-
-
-
-'''
-
-
-
-
 
 
 
@@ -362,29 +318,6 @@ if save_tables:
         tf.write(dtf_journals_heterodox_recall_correlation.to_latex(index=False,
                                                                    escape = False,
                                                                    column_format="lccc"))
-
-'''
-dtf_journals_AVG_PRED_PROB_correlation = dtf_journals.pivot(index="test_journal", columns="current_model", values="AVG_PRED_PROB").corr()
-dtf_journals_orthodox_AVG_PRED_PROB_correlation = dtf_journals[dtf_journals["Label"] == "0orthodox"].pivot(index="test_journal", columns="current_model", values="AVG_PRED_PROB").corr()
-dtf_journals_heterodox_AVG_PRED_PROB_correlation = dtf_journals[dtf_journals["Label"] == "1heterodox"].pivot(index="test_journal", columns="current_model", values="AVG_PRED_PROB").corr()
-
-
-if save_tables:
-    with open(data_path + "/" + plots_tables_folder + "/journals_orthodox_table_avg_pred_prob_corr.tex", 'w') as tf:
-        tf.write(dtf_journals_orthodox_AVG_PRED_PROB_correlation.to_latex(caption="Correlation between models for heterodoxy score of orthodox journals",
-                                                                          label="journals_orthodox_table_avg_pred_prob_corr",
-                                                                          index=False))
-
-    with open(data_path + "/" + plots_tables_folder + "/journals_heterodox_table_avg_pred_prob_corr.tex", 'w') as tf:
-        tf.write(dtf_journals_heterodox_AVG_PRED_PROB_correlation.to_latex(caption="Correlation between models for heterodoxy score of heterodox journals",
-                                                                           label="journals_heterodox_table_avg_pred_prob_corr",
-                                                                           index=False))
-
-'''
-
-
-
-
 
 
 
@@ -494,32 +427,6 @@ if save_plots:
     plt.savefig(data_path + "/" + plots_tables_folder + "/top5_plot_histogram_TFIDF_heterodoxy_score")
     plt.close()
 
-    '''
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.histplot(data=dtf_top5_pivot["avg_het_score"])
-    ax.set_title("Distribution of average heterodoxy score of articles", fontsize=15)
-    plt.savefig(data_path + "/" + plots_tables_folder + "/top5_plot_histogram_average_heterodoxy_score")
-    plt.close()
-
-    fig, ax = plt.subplots(figsize= (10,6))
-    sns.histplot(data = dtf_top5_pivot[('predicted_prob', 'TFIDF')], color = "r", label = "TFIDF", element = "poly", alpha = 0).set(yscale = "log", xlim = ((0.05,0.95)))
-    sns.histplot(data = dtf_top5_pivot[('predicted_prob', 'W2V')], color = "g", label = "W2V", element = "poly", alpha = 0).set(yscale = "log", xlim = ((0.05,0.95)))
-    sns.histplot(data = dtf_top5_pivot[('predicted_prob', 'BERT')], color = "b", label = "BERT", element = "poly", alpha = 0).set(yscale = "log", xlim = ((0.05,0.95)))
-    sns.histplot(data = dtf_top5_pivot["avg_het_score"], color = "y", label = "Average", element = "poly", alpha = 0).set(yscale = "log", xlim = ((0.05,0.95)))
-    ax.set_title("Distribution of heterodoxy score of articles by model", fontsize = 15)
-    plt.legend()
-    plt.savefig(data_path + "/" + plots_tables_folder + "/top5_plot_histogram_average_heterodoxy_score")
-    plt.close()
-
-    fig, ax = plt.subplots(figsize= (10,6))
-    sns.distplot(dtf_top5_pivot[('predicted_prob', 'TFIDF')], hist = False, kde = True, color = "r", label = "TFIDF").set(xlim = ((0.4,1)), ylim = ((0,0.5)) )
-    sns.distplot(dtf_top5_pivot[('predicted_prob', 'W2V')], hist = False, kde = True, color = "b", label = "W2V").set(xlim = ((0.4,1)), ylim = ((0,0.5)) )
-    sns.distplot(dtf_top5_pivot[('predicted_prob', 'BERT')], hist = False, kde = True, color = "g", label = "BERT").set(xlim = ((0.4,1)), ylim = ((0,0.5)) )
-    ax.set_title("Distribution of heterodoxy score of articles by model", fontsize = 15)
-    plt.legend()
-    plt.savefig(data_path + "/" + plots_tables_folder + "/top5_plot_histogram_average_heterodoxy_score")
-    plt.close()
-    '''
 
 # most heterodox
 ##############
@@ -754,16 +661,7 @@ if save_plots:
     plt.close()
 
 
-'''
-top5_data_agg_latex = top5_data_agg.groupby("journal").sum("num_articles")
 
-
-if save_tables:
-    with open(data_path + "/" + plots_tables_folder + "/top5_table_articles_by_journal.tex", 'w') as tf:
-        tf.write(top5_data_agg_latex.to_latex(caption="Number of articles by journal",
-                                                         label="top5_table_articles_by_journal",
-                                                         index=True))
-'''
 
 # authors
 #####################
@@ -882,46 +780,6 @@ if save_tables:
         tf.write(dtf_top5_authors_mosthet_prop.to_latex(index=False,
                                                   escape=False,
                                                   column_format="lccc"))
-
-print("huh")
-'''
-if save_tables:
- 
-    with open(data_path + "/" + plots_tables_folder + "/top5_table_most_heterodox_count.tex", 'w') as tf:
-        tf.write(dtf_top5_authors_mosthet_count.to_latex(caption="All authors with at lest 5 heterodox articles published in the Top 5 Journals (1990-2020)",
-                                                         label="top5_table_most_heterodox_count",
-                                                         index=True))
-
-
-dtf_top5_pivot_long[("predicted_prob","TFIDF")]
-
-dtf_top5_pivot_tfidf_orthodox = dtf_top5_pivot.loc[dtf_top5_pivot["predicted_bin"]["TFIDF"]==0]
-dtf_top5_pivot_tfidf_heterodox = dtf_top5_pivot.loc[dtf_top5_pivot["predicted_bin"]["TFIDF"]==1]
-
-
-publication_count = pd.DataFrame({"author": list(set(authors_final)),
-                                  "orthodox_count": [0 for i in list(set(authors_final))],
-                                  "heterodox_count": [0 for i in list(set(authors_final))],})
-
-for i in list(set(authors_final)):
-    orthodox_count = sum(1 for s in dtf_top5_pivot_tfidf_orthodox["author"] if i in s)
-    heterodox_count = sum(1 for s in dtf_top5_pivot_tfidf_heterodox["author"] if i in s)
-    publication_count.loc[publication_count["author"] == i, "orthodox_count"] = orthodox_count
-    publication_count.loc[publication_count["author"] == i, "heterodox_count"] = heterodox_count
-
-publication_count["total_count"] = publication_count["orthodox_count"] + publication_count["heterodox_count"]
-
-publication_count["heterodox_proportion"] = publication_count["heterodox_count"] / publication_count["total_count"]
-
-publication_count.sort_values("heterodox_count", ascending=False, inplace=True)
-
-'''
-
-
-
-
-
-
 
 
 

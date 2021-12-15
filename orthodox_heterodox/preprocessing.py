@@ -10,12 +10,21 @@ The data for reproduction can be found on:
 - Euler: /cluster/work/lawecon/Projects/Ash_Durrer/dev/data
 --> The relevant config-files for github and the profile settings for Euler are in the "notes" folders
 
-
 Much of the code here is based on:
 https://towardsdatascience.com/text-classification-with-nlp-tf-idf-vs-word2vec-vs-bert-41ff868d1794
+
+PREREQUISITS:
+- GET DATA FROM THE ABOVE SOURCES OR FROM THE WEB OF SCIENCE
+
+THIS SCRIPT IS USED TO PREPROCESS THE DATA AS DESCRIBED IN THE MASTERS THESIS "THE DIALECTS OF ECONOSPEAK" BY DAMIAN DURRER (2021)
+
 '''
 
 
+'''
+PACKAGES & SET UP
+'''
+#######################################
 ## set up
 import time
 tic = time.perf_counter()
@@ -51,60 +60,75 @@ import multiprocessing as mp
 ##downloading wordlist in main
 import nltk
 
-'''
-DISCIPLINES SPECIFIC IMPORTS
-'''
 ## for data
 import pandas as pd
-
 pd.set_option('display.max_columns', None)
-# import collections
-# import json
-# from scipy import stats
+#######################################
 
-## for plotting
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-# import wordcloud
-
-## for text processing
-# import re
-# import nltk
-
-## for language detection
-import langdetect
-
-## for sentiment
-# from textblob import TextBlob
-
-## for ner
-# import spacy
-
-## for vectorizer
-# from sklearn import feature_extraction, manifold
-
-## for word embedding
-# import gensim.downloader as gensim_api
-
-## for topic modeling
-# import gensim
+'''
+INPUT REQUIRED: SET PARAMETERS
+----------------------------------------------------------
+'''
 
 ############################################
-logging_level = logging.INFO  # logging.DEBUG #logging.WARNING
-print_charts_tables = True  # False #True
+logging_level = logging.INFO
+## Choose level of logs to display in console
+#### Recommended: logging.INFO
+#### Alternative: logging.DEBUG // #logging.WARNING
+
+print_charts_tables = False
+## Choose wether to print diagostics charts and tables
+#### Recommended: False // no charts and tables printed
+#### Alternative: True // print diagnostic charts and tables
+
 input_file_name = "WOS_top5_new"
-input_file_size = "all" #10000 #"all"
-input_file_type = "csv"
-output_file_name = "WOS_top5_new_preprocessed_2"
-sample_size = "all" #"all"  #input_file_size #10000 #"all"
-text_field = "Abstract"  # "title" #"abstract"
+## Choose input file name to apply preprocessing to. This must be a file containing abstracts and labels of articles and be located in DATA_PATH
+#### Recommended: "WOS_top5_new" // top 5 articles ; "WOS_lee_heterodox_und_samequality_new" // full labeled dataset
+
+
+output_file_name = "WOS_top5_new_preprocessed_2_test"
+## Choose output file name
+
+sample_size = "all"
+## Choose sample size to sample the input file and only preprocess a number of observations
+#### Recommended: "all" // apply preprocessing to full data
+#### Alternative: 1000 // (or any number) to create pre-processed file with only n observations
+
+text_field = "Abstract"
+## specify where the texts to preprocess are found
+#### Recommended: "Abstract" // WOS name for the abstract field
+#### Alternative: "Article Title"
+
 label_field = "labels"
-#remove_last_n = 50 #remove 45 for elsevier copyright
+## specify the name of the label field (i.e. where we find the labels "0samequality" and "1heterodox"
+#### Recommended: "labels"
+
 min_char = 120
-cores = mp.cpu_count()  #mp.cpu_count()  #2
-save = True  # False #True
+## choose the minimum length of the text --> this is important because the last 40 characters are deleted (because they might contain copyright mentions etc)
+#### Recommended: 120
+
+cores = mp.cpu_count()
+## choose number of cores to use for parallel preprocessing
+#### Recommended: mp.cpu_count() // all available cores
+#### Alternative: 1 // only one core
+
+save = True
+## choose whether to save the results
+#### Recommended: True // save results
+#### Alternative: False // don't save results
 ############################################
 
+
+'''
+FINAL SET UP
+----------------------------------------------------------
+'''
+
+
+## LEGACY, cont change
+input_file_type = "csv"
+input_file_size = "all"
+## LEGACY, cont change
 
 def monitor_process():
     ##monitor progress if run on local machine
@@ -139,6 +163,12 @@ logger = logging.getLogger()
 
 from Utils import utils_ortho_hetero as fcts
 
+
+'''
+APPLY PRE-PROCESSING
+----------------------------------------------------------
+'''
+
 def main():
     logger.info("START MAIN")
     logger.info("Logging Level: " + str(logging_level))
@@ -148,40 +178,19 @@ def main():
     nltk.download('wordnet')
     nltk.download('stopwords')
 
-    fcts.hello_world() #test
-
     dtf = fcts.load_data(data_path=data_path,
                          input_file_type=input_file_type,
                          input_file_size=input_file_size,
                          input_file_name=input_file_name,
                          sample_size=sample_size)
-    # logger.info("Data Short Head:\n" + str(dtf.head()) + "\n")
-
-    """
-    if save == True:
-        fcts.save_data_csv(dtf=dtf,
-                           data_path=data_path,
-                           output_file_name=input_file_name,
-                           sample_size=sample_size)
-    """
 
     dtf = fcts.rename_fields(dtf=dtf,
                              text_field=text_field,
                              label_field=label_field)
-    # logger.info("Data Subset & Rename Head:\n" + str(dtf.head()) + "\n")
 
     dtf = fcts.split_text(dtf=dtf,
                           min_char=min_char)
-    # logger.info("Data Languages Head:\n" + str(dtf.head()) + "\n")
 
-    '''
-    dtf = fcts.language_detection_wrapper(dtf=dtf,
-                                          min_char=min_char,
-                                          cores=cores,
-                                          function=langdetect.detect)
-    # logger.info("Data Languages Head:\n" + str(dtf.head()) + "\n")
-    '''
-    #lst_stopwords = fcts.load_stopwords()
 
     dtf = fcts.preprocessing_wrapper(dtf=dtf, cores=cores)
     logger.info("Data Languages Head:\n" + str(dtf.head()) + "\n")
