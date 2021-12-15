@@ -6,7 +6,7 @@ venv/
 lsf.*
 archive/
 orthodox_heterodox/archive/
-Utils/orthodox_heterodox/archive/
+Utils/archive/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

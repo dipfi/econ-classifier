@@ -10,6 +10,7 @@ import os
 import sys
 
 
+
 def config():
     config = configparser.ConfigParser()
     config.read(os.getcwd() + '/config.ini')
