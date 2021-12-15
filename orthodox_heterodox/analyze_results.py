@@ -19,7 +19,6 @@ THIS SCRIPT IS USED TO GENERATE THE PLOTS AND TABLES USED IN THE MASTERS THESIS 
 
 '''
 
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

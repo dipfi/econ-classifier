@@ -2,17 +2,18 @@
 This is the code base for the Master Thesis "The Dialects of Econospeak" by Damian Durrer (2021)
 
 ## Abstrac & Info:
+
+### Abstract
 "This thesis explores the differences in the language used in heterodox and orthodox economics journals with machine learning. We trained and evaluated various document classification models with a set of articles which were published in labeled journals between 1990 and 2020. The differences between the heterodox and orthodox dialect of economics are then explored by analyzing the feature weights in the models. We applied the models to the articles published in the top 5 economics journals during the same time, evaluate the proportion of heterodox articles by journal, and identify the most heterodox articles and authors. Various models from different categories of classification systems are fitted and compared: A benchmark model using a logistic regression classifier on a tf-idf weighted feature matrix, and two competitors using word2vec embeddings, BiLSTMs and DistilBert transformers. The benchmark model outperforms both competitors on the classification task. We achieve a reasonable performance in discriminating articles published in heterodox economic journals from articles published in orthodox economic journals using automated text classification systems. Our analysis indicates, that the proportion of heterodox articles in the top 5 journals has been declining over the past three decades."
 
 The full text is available upon request.
 
-All the data, tables and plots to use the code on can be accessed on:
-https://drive.infomaniak.com/app/share/249519/d8dab04d-7ced-4f3a-a995-1916b3aa03a9
---> Download data and retain the folder structure to use the code without adjustments.
---> consult "readme" files in the data-folder for information on the data
+### Data
+All the data, tables and plots to use the with the code can be shared by the author upon request.
 
 On the ETHZ Euler cluster, the data and code can be found under: /cluster/work/lawecon/Projects/Ash_Durrer/dev/"
 
+### Misc
 Much of the code found here is based on the article by Di Pietro (2021):
 https://towardsdatascience.com/text-classification-with-nlp-tf-idf-vs-word2vec-vs-bert-41ff868d1794
 
